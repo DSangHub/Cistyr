@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CISTYR • Called in Sick, To Your Rescue</title>
+    <link rel="icon" type="image/jpeg" href="assets/icon.jpg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Poppins:wght@600&amp;display=swap');
+
+        :root {
+            --primary: #059669;
+        }
+
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+
+        .logo-font {
+            font-family: 'Poppins', 'Inter', sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        .section-header {
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .shift-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .shift-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        .status-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .nav-active {
+            background-color: #059669;
+            color: white;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal {
+            animation: modalPop 0.2s ease-out forwards;
+        }
+
+        @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .rescue-btn {
+            transition: all 0.1s ease;
+        }
+
+        .rescue-btn:active {
+            transform: scale(0.985);
+        }
+
+        .category-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.125rem 0.625rem;
+            border-radius: 9999px;
+        }
+
+        .demo-toast {
+            animation: slideUp 0.3s ease forwards;
+        }
+
+        .light-red { background-color: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2); }
+        .light-green { background-color: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); }
+
+        .app-container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <!-- Top Navigation -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-screen-xl mx-auto">
+            <div class="px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-x-3">
+                    <!-- Logo -->
+                    <div class="flex items-center gap-x-3">
+                        <img src="assets/logo.jpg" alt="CISTYR - Called in Sick, To Your Rescue" class="h-12 md:h-14 w-auto">
+                        <div class="hidden md:block">
+                            <span class="text-xs px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full font-semibold">MVP v0.9 • Demo</span>
+                        </div>
+                    </div>
+                    <div class="hidden md:block">
+                        <span class="text-xs px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full font-semibold">MVP v0.9 • Demo</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-x-2 text-sm">
+                    <button onclick="document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })"
+                            class="px-4 py-2 text-slate-600 hover:text-emerald-700 font-medium transition-colors">
+                        How it Works
+                    </button>
+                    <button onclick="showAllShifts()"
+                            class="hidden md:flex items-center gap-x-2 px-4 py-2 text-slate-600 hover:text-emerald-700 font-medium transition-colors">
+                        <i class="fa-solid fa-search mr-1.5"></i>
+                        <span>Browse All</span>
+                    </button>
+
+                    <!-- Role Toggle -->
+                    <div class="flex items-center bg-slate-100 rounded-3xl p-1 shadow-inner ml-2">
+                        <button id="worker-toggle"
+                                onclick="switchMode('worker')"
+                                class="px-5 py-1.5 text-sm font-semibold rounded-3xl flex items-center gap-x-2 transition-all active:bg-white active:shadow">
+                            <i class="fa-solid fa-user-nurse"></i>
+                            <span class="hidden sm:inline">Worker</span>
+                        </button>
+                        <button id="business-toggle"
+                                onclick="switchMode('business')"
+                                class="px-5 py-1.5 text-sm font-semibold rounded-3xl flex items-center gap-x-2 transition-all">
+                            <i class="fa-solid fa-store"></i>
+                            <span class="hidden sm:inline">Business</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero / Intro -->
+    <div class="bg-white border-b border-slate-100">
+        <div class="max-w-screen-xl mx-auto px-6 pt-12 pb-12">
+            <div class="grid md:grid-cols-12 gap-x-8 items-center">
+                <!-- Text Content -->
+                <div class="md:col-span-7">
+                    <div class="inline-flex items-center gap-x-2 bg-emerald-100 text-emerald-700 px-4 py-1 rounded-full mb-6 text-sm font-semibold">
+                        <div class="w-2 h-2 bg-emerald-600 rounded-full animate-pulse"></div>
+                        <span>Same-day &amp; next-day temp staffing</span>
+                    </div>
+
+                    <h1 class="text-6xl md:text-7xl font-bold tracking-tighter leading-none mb-4 text-slate-900">
+                        Called in Sick.<br>
+                        <span class="text-emerald-600">To Your Rescue.</span>
+                    </h1>
+                    <p class="text-2xl text-slate-600 max-w-lg mb-8 font-light tracking-tight">
+                        Instant matching for fast food, retail &amp; medical support shifts when plans change.
+                    </p>
+
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="switchMode('worker'); document.getElementById('main-app').scrollIntoView({ behavior: 'smooth' })"
+                                class="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-3xl flex items-center gap-x-3 shadow-xl hover:shadow-2xl active:scale-[0.985] transition-all text-lg">
+                            <i class="fa-solid fa-user-check"></i>
+                            <span>I'm Ready to Rescue</span>
+                        </button>
+                        <button onclick="switchMode('business'); document.getElementById('main-app').scrollIntoView({ behavior: 'smooth' })"
+                                class="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 font-semibold rounded-3xl flex items-center gap-x-3 transition-all text-lg text-slate-700">
+                            <i class="fa-solid fa-exclamation-triangle"></i>
+                            <span>Post a Called-In-Sick Shift</span>
+                        </button>
+                    </div>
+                    <p class="mt-6 text-slate-500 text-sm flex items-center gap-x-2">
+                        <i class="fa-solid fa-map-marker-alt"></i>
+                        <span>Sacramento Metro • Bay Area • Los Angeles • Orange County</span>
+                    </p>
+                </div>
+
+                <!-- Hero Visual -->
+                <div class="md:col-span-5 mt-10 md:mt-0">
+                    <div class="relative rounded-3xl overflow-hidden shadow-2xl border border-slate-200">
+                        <img src="assets/hero.jpg" alt="CISTYR - Fast reliable rescue for when staff calls in sick" class="w-full h-auto">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- How it Works -->
+    <div id="how-it-works" class="max-w-screen-xl mx-auto px-6 py-16 border-b border-slate-200">
+        <div class="text-center mb-10">
+            <span class="text-emerald-600 font-semibold tracking-widest text-xs">SIMPLE • FAST • DIRECT</span>
+            <h2 class="section-header text-4xl mt-2">How CISTYR Works</h2>
+            <p class="text-slate-600 mt-3 max-w-md mx-auto">No middlemen. No recruiters. Just real people helping real businesses when it matters most.</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            <!-- Worker Flow -->
+            <div class="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+                <div class="flex items-center gap-x-3 mb-6">
+                    <div class="w-9 h-9 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+                        <i class="fa-solid fa-user-nurse text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-xl">For Workers</span>
+                        <span class="block text-xs text-emerald-600 -mt-0.5">Pick up shifts fast</span>
+                    </div>
+                </div>
+                <div class="space-y-5 text-sm">
+                    <div class="flex gap-4">
+                        <div class="font-mono w-6 h-6 flex-shrink-0 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                        <div><span class="font-semibold">Create profile &amp; upload resume</span><br><span class="text-slate-500 text-xs">Takes 60 seconds. Add your categories &amp; availability.</span></div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="font-mono w-6 h-6 flex-shrink-0 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                        <div><span class="font-semibold">Browse "Called in Sick" posts</span><br><span class="text-slate-500 text-xs">Filter by category, time, and location near you.</span></div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="font-mono w-6 h-6 flex-shrink-0 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                        <div><span class="font-semibold">Tap <span class="font-bold text-red-600">"To Your Rescue"</span></span><br><span class="text-slate-500 text-xs">Instant green light. Business gets notified. You get the shift.</span></div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="font-mono w-6 h-6 flex-shrink-0 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
+                        <div><span class="font-semibold">Show up &amp; get paid</span><br><span class="text-slate-500 text-xs">Direct with the business. Keep 100% of your earnings.</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Business Flow -->
+            <div class="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
+                <div class="flex items-center gap-x-3 mb-6">
+                    <div class="w-9 h-9 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
+                        <i class="fa-solid fa-store text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-xl">For Businesses</span>
+                        <span class="block text-xs text-red-600 -mt-0.5">Fill gaps in minutes</span>
+                    </div>
+                </div>
+                <div class="space-y-5 text-sm">
+                    <div class="flex gap-4">
+                        <div class="font-mono w-6 h-6 flex-shrink-0 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                        <div><span class="font-semibold">Set up your business profile</span><br><span class="text-slate-500 text-xs">Name, location, contact. One-time setup.</span></div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="font-mono w-6 h-6 flex-shrink-0 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                        <div><span class="font-semibold">Post a "Called in Sick" shift</span><br><span class="text-slate-500 text-xs">Choose category • time • pay. Goes live instantly.</span></div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="font-mono w-6 h-6 flex-shrink-0 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                        <div><span class="font-semibold">Watch the light turn green</span><br><span class="text-slate-500 text-xs">When a worker taps "To Your Rescue", you get matched instantly.</span></div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="font-mono w-6 h-6 flex-shrink-0 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
+                        <div><span class="font-semibold">Confirm &amp; operate</span><br><span class="text-slate-500 text-xs">Direct coordination. No platform fees on the shift itself.</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-8">
+            <p class="text-xs text-slate-500 max-w-md mx-auto">CISTYR is a direct matching platform. Businesses and workers handle all payments, scheduling, and compliance directly. Always verify qualifications and follow CA labor laws.</p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="main-app" class="max-w-screen-xl mx-auto px-6 py-10">
+
+        <!-- Mode Indicator -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <span id="mode-label" class="font-bold text-3xl tracking-tight"></span>
+                <span id="mode-sub" class="block text-slate-500 text-sm -mt-1"></span>
+            </div>
+            <div class="text-xs px-3 py-1.5 bg-white border rounded-2xl text-slate-500 flex items-center gap-x-2 shadow-sm">
+                <i class="fa-solid fa-sync fa-sm"></i>
+                <span>Demo data saved in your browser</span>
+            </div>
+        </div>
+
+        <!-- WORKER PANEL -->
+        <div id="worker-panel">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- Worker Profile Card -->
+                <div class="lg:col-span-4 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm h-fit">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="font-semibold flex items-center gap-x-2">
+                            <i class="fa-solid fa-id-card text-emerald-600"></i>
+                            <span>Your Worker Profile</span>
+                        </div>
+                        <button onclick="showWorkerProfileModal()"
+                                class="text-xs px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-2xl font-medium transition-colors">
+                            Edit
+                        </button>
+                    </div>
+
+                    <div id="worker-profile-summary">
+                        <!-- Populated by JS -->
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t text-xs text-slate-500">
+                        <div class="flex items-center gap-x-2">
+                            <i class="fa-solid fa-file-alt"></i>
+                            <span id="resume-status">No resume uploaded yet</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Available Shifts -->
+                <div class="lg:col-span-8">
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <div class="font-semibold flex items-center gap-x-2 text-xl">
+                            <span>Available Rescue Shifts</span>
+                            <span id="open-count-badge"
+                                  class="text-xs font-mono bg-red-100 text-red-600 px-2.5 py-0.5 rounded-full">0 open</span>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="flex items-center gap-x-2 text-sm">
+                            <select id="category-filter" onchange="filterShifts()"
+                                    class="bg-white border border-slate-300 text-sm rounded-2xl px-4 py-2 focus:outline-none focus:border-emerald-400">
+                                <option value="">All Categories</option>
+                                <option value="Fast Food">Fast Food</option>
+                                <option value="Retail">Retail</option>
+                                <option value="Medical Non-Essential">Medical Non-Essential</option>
+                            </select>
+
+                            <button onclick="filterShifts()"
+                                    class="px-4 py-2 text-xs border border-slate-300 hover:bg-slate-100 rounded-2xl transition-colors flex items-center gap-x-1.5">
+                                <i class="fa-solid fa-filter"></i>
+                                <span class="hidden sm:inline">Filter</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="shifts-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <!-- Shift cards injected by JS -->
+                    </div>
+
+                    <p class="text-center text-xs text-slate-400 mt-4">Shifts shown are same-day or next-day only • Sacramento &amp; surrounding areas</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- BUSINESS PANEL -->
+        <div id="business-panel" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- Business Profile -->
+                <div class="lg:col-span-4 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm h-fit">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="font-semibold flex items-center gap-x-2">
+                            <i class="fa-solid fa-building text-red-600"></i>
+                            <span>Your Business Profile</span>
+                        </div>
+                        <button onclick="showBusinessProfileModal()"
+                                class="text-xs px-3 py-1 bg-red-50 hover:bg-red-100 text-red-700 rounded-2xl font-medium transition-colors">
+                            Edit
+                        </button>
+                    </div>
+
+                    <div id="business-profile-summary">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Post New Shift Form -->
+                <div class="lg:col-span-8 bg-white rounded-3xl border border-red-100 p-6 shadow-sm">
+                    <div class="flex items-center gap-x-3 mb-5">
+                        <div class="px-4 py-1.5 bg-red-600 text-white text-sm font-bold rounded-3xl flex items-center gap-x-2">
+                            <i class="fa-solid fa-exclamation-circle"></i>
+                            <span>POST NEW CALLED-IN-SICK SHIFT</span>
+                        </div>
+                    </div>
+
+                    <form id="post-shift-form" onsubmit="postNewShift(event)">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-5">
+
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 tracking-wider block mb-1.5">CATEGORY</label>
+                                <select id="post-category" required class="w-full border border-slate-300 focus:border-red-400 rounded-2xl px-4 py-3 text-sm">
+                                    <option value="Fast Food">🍔 Fast Food</option>
+                                    <option value="Retail">🛍️ Retail</option>
+                                    <option value="Medical Non-Essential">🏥 Medical Non-Essential</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 tracking-wider block mb-1.5">WHEN</label>
+                                <select id="post-when" required class="w-full border border-slate-300 focus:border-red-400 rounded-2xl px-4 py-3 text-sm">
+                                    <option value="Today">Today (Same Day)</option>
+                                    <option value="Tomorrow">Tomorrow</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 tracking-wider block mb-1.5">START TIME</label>
+                                <input type="time" id="post-start-time" value="14:00" required
+                                       class="w-full border border-slate-300 focus:border-red-400 rounded-2xl px-4 py-3 text-sm">
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 tracking-wider block mb-1.5">END TIME</label>
+                                <input type="time" id="post-end-time" value="18:00" required
+                                       class="w-full border border-slate-300 focus:border-red-400 rounded-2xl px-4 py-3 text-sm">
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 tracking-wider block mb-1.5">PAY RATE</label>
+                                <div class="relative">
+                                    <input type="number" id="post-pay" value="21" step="0.5" required
+                                           class="w-full border border-slate-300 focus:border-red-400 rounded-2xl px-4 py-3 text-sm pr-12">
+                                    <div class="absolute right-4 top-3.5 text-slate-400 text-sm font-medium">$/hr</div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-semibold text-slate-500 tracking-wider block mb-1.5">LOCATION (or use profile)</label>
+                                <input type="text" id="post-location" placeholder="Downtown Sacramento, CA"
+                                       class="w-full border border-slate-300 focus:border-red-400 rounded-2xl px-4 py-3 text-sm">
+                            </div>
+
+                            <div class="md:col-span-2">
+                                <label class="text-xs font-semibold text-slate-500 tracking-wider block mb-1.5">NOTES / REASON (visible to workers)</label>
+                                <textarea id="post-notes" rows="2" placeholder="Server called in sick for dinner rush. Need reliable closer with food handler card."
+                                          class="w-full border border-slate-300 focus:border-red-400 rounded-3xl px-4 py-3 text-sm resize-y"></textarea>
+                            </div>
+                        </div>
+
+                        <button type="submit"
+                                class="mt-6 w-full bg-red-600 hover:bg-red-700 active:bg-red-800 transition-colors text-white font-bold py-4 rounded-3xl flex items-center justify-center gap-x-3 text-base shadow-inner">
+                            <i class="fa-solid fa-paper-plane"></i>
+                            <span>PUBLISH SHIFT — START RECEIVING RESCUES</span>
+                        </button>
+
+                        <p class="text-center text-[10px] text-red-400 mt-3">This will appear instantly on the worker board with a RED light</p>
+                    </form>
+                </div>
+
+                <!-- My Posted Shifts -->
+                <div class="lg:col-span-12 mt-2">
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <div class="font-semibold text-xl flex items-center gap-x-2">
+                            <span>Your Posted Shifts</span>
+                            <span id="my-posts-count" class="text-xs px-2.5 py-0.5 bg-slate-200 text-slate-600 rounded-full font-mono">0</span>
+                        </div>
+                    </div>
+
+                    <div id="my-posts-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-y-2"></div>
+
+    <!-- Worker Profile Modal -->
+    <div id="worker-modal" onclick="if (event.target.id === 'worker-modal') hideWorkerProfileModal()"
+         class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <span class="font-bold text-2xl">Your Worker Profile</span>
+                    <p class="text-xs text-emerald-600">Visible to businesses when you rescue shifts</p>
+                </div>
+                <button onclick="hideWorkerProfileModal()" class="text-3xl leading-none text-slate-300 hover:text-slate-400">&times;</button>
+            </div>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="text-xs font-bold tracking-wider text-slate-500">FULL NAME</label>
+                    <input id="worker-name" type="text" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="Alex Rivera">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold tracking-wider text-slate-500">PHONE</label>
+                        <input id="worker-phone" type="tel" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="(916) 555-0192">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold tracking-wider text-slate-500">EMAIL</label>
+                        <input id="worker-email" type="email" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="you@email.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold tracking-wider text-slate-500 mb-1.5 block">CATEGORIES YOU CAN WORK</label>
+                    <div class="flex flex-wrap gap-2" id="worker-categories">
+                        <!-- Checkboxes populated by JS -->
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold tracking-wider text-slate-500">RESUME / CERTIFICATIONS</label>
+                    <div class="mt-1.5 flex items-center gap-x-3">
+                        <label class="cursor-pointer flex-1">
+                            <div class="border border-dashed border-emerald-300 hover:border-emerald-400 transition-colors rounded-2xl px-5 py-4 text-center">
+                                <i class="fa-solid fa-upload text-emerald-500 mb-1"></i>
+                                <div class="text-xs font-medium text-emerald-600">Upload PDF or DOC</div>
+                                <input type="file" id="resume-upload" accept=".pdf,.doc,.docx" class="hidden" onchange="handleResumeUpload(this)">
+                            </div>
+                        </label>
+                        <div id="resume-filename" class="text-xs text-emerald-700 font-medium max-w-[140px] truncate"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold tracking-wider text-slate-500">QUICK AVAILABILITY NOTE</label>
+                    <input id="worker-availability" type="text" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm"
+                           placeholder="Usually available same-day after 11am in Sacramento area">
+                </div>
+            </div>
+
+            <div class="mt-7 flex gap-x-3">
+                <button onclick="saveWorkerProfile()"
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-3xl transition-colors">
+                    SAVE PROFILE
+                </button>
+                <button onclick="hideWorkerProfileModal()"
+                        class="flex-1 border border-slate-300 hover:bg-slate-50 font-medium py-3.5 rounded-3xl transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Business Profile Modal -->
+    <div id="business-modal" onclick="if (event.target.id === 'business-modal') hideBusinessProfileModal()"
+         class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <span class="font-bold text-2xl">Business Profile</span>
+                    <p class="text-xs text-red-600">Used when posting shifts</p>
+                </div>
+                <button onclick="hideBusinessProfileModal()" class="text-3xl leading-none text-slate-300 hover:text-slate-400">&times;</button>
+            </div>
+
+            <div class="space-y-5">
+                <div>
+                    <label class="text-xs font-bold tracking-wider text-slate-500">BUSINESS / LOCATION NAME</label>
+                    <input id="business-name" type="text" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="QuickBite Burgers - Broadway">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-bold tracking-wider text-slate-500">PHONE</label>
+                        <input id="business-phone" type="tel" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="(916) 555-8821">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold tracking-wider text-slate-500">EMAIL</label>
+                        <input id="business-email" type="email" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="manager@business.com">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold tracking-wider text-slate-500">FULL ADDRESS</label>
+                    <input id="business-address" type="text" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="1245 Broadway, Sacramento, CA 95818">
+                </div>
+            </div>
+
+            <div class="mt-7 flex gap-x-3">
+                <button onclick="saveBusinessProfile()"
+                        class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-3xl transition-colors">
+                    SAVE BUSINESS PROFILE
+                </button>
+                <button onclick="hideBusinessProfileModal()"
+                        class="flex-1 border border-slate-300 hover:bg-slate-50 font-medium py-3.5 rounded-3xl transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rescuer Rating Modal -->
+    <div id="rating-modal" onclick="if (event.target.id === 'rating-modal') hideRatingModal()"
+         class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-white rounded-3xl max-w-md w-full p-7 shadow-2xl">
+            <div class="flex justify-between items-start mb-5">
+                <div>
+                    <span class="font-bold text-2xl">Rate the Rescuer</span>
+                    <p class="text-xs text-emerald-600 mt-1" id="rating-rescuer-name"></p>
+                </div>
+                <button onclick="hideRatingModal()" class="text-3xl leading-none text-slate-300 hover:text-slate-400">&times;</button>
+            </div>
+
+            <p class="text-sm text-slate-600 mb-6">Your feedback helps build trust in the CISTYR community. This is voluntary and anonymous to other workers.</p>
+
+            <div class="space-y-6" id="rating-questions">
+                <!-- Populated dynamically by JS -->
+            </div>
+
+            <div class="mt-8 flex gap-x-3">
+                <button onclick="submitRescuerRating()"
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-3xl transition-colors">
+                    SUBMIT RATING
+                </button>
+                <button onclick="skipRatingAndComplete()"
+                        class="flex-1 border border-slate-300 hover:bg-slate-50 font-medium py-3.5 rounded-3xl transition-colors text-sm">
+                    Skip for now
+                </button>
+            </div>
+
+            <p class="text-center text-[10px] text-slate-400 mt-4">Only the business and platform see individual ratings. Workers see aggregate stats.</p>
+        </div>
+    </div>
+
+    <!-- Worker Reviews Modal -->
+    <div id="reviews-modal" onclick="if (event.target.id === 'reviews-modal') hideReviewsModal()"
+         class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center p-4">
+        <div onclick="event.stopImmediatePropagation()" class="modal bg-white rounded-3xl max-w-lg w-full max-h-[85vh] overflow-hidden shadow-2xl flex flex-col">
+            <div class="px-7 pt-7 pb-4 border-b flex justify-between items-center">
+                <div>
+                    <span class="font-bold text-2xl">Your Reviews</span>
+                    <span id="reviews-count" class="ml-2 text-sm px-3 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-mono"></span>
+                </div>
+                <button onclick="hideReviewsModal()" class="text-3xl leading-none text-slate-300 hover:text-slate-400">&times;</button>
+            </div>
+
+            <div id="reviews-list" class="flex-1 overflow-y-auto p-7 space-y-4 text-sm">
+                <!-- Populated by JS -->
+            </div>
+
+            <div class="p-7 border-t bg-slate-50 text-xs text-slate-500">
+                These reviews were left voluntarily by businesses after you completed shifts. They help build your reputation on CISTYR.
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-100 mt-12 py-8">
+        <div class="max-w-screen-xl mx-auto px-6 text-xs text-slate-400 flex flex-col md:flex-row justify-between items-center gap-y-2">
+            <div>
+                © CISTYR 2026 • cistyr.org • Direct matching platform (not a staffing agency)
+            </div>
+            <div class="flex items-center gap-x-4">
+                <span>CA-focused • Built for compliance &amp; speed</span>
+                <span class="hidden md:inline">•</span>
+                <button onclick="resetDemoData()" class="hover:text-slate-500 underline">Reset Demo Data</button>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Tailwind script
+        function initTailwind() {
+            document.documentElement.style.setProperty('--accent', '#059669');
+        }
+
+        // Data storage
+        let posts = [];
+        let workerProfile = {};
+        let businessProfile = {};
+        let ratings = [];
+        let currentMode = 'worker';
+
+        const CATEGORIES = ["Fast Food", "Retail", "Medical Non-Essential"];
+
+        // Load from localStorage
+        function loadData() {
+            const savedPosts = localStorage.getItem('cistyr_posts');
+            const savedWorker = localStorage.getItem('cistyr_worker');
+            const savedBusiness = localStorage.getItem('cistyr_business');
+            const savedRatings = localStorage.getItem('cistyr_ratings');
+
+            if (savedPosts) {
+                posts = JSON.parse(savedPosts);
+            } else {
+                // Seed demo data
+                posts = [
+                    {
+                        id: 1001,
+                        category: "Fast Food",
+                        businessName: "QuickBite Burgers",
+                        location: "Downtown Sacramento, CA",
+                        time: "Today • 2:00 PM – 6:00 PM",
+                        pay: "$22/hr",
+                        description: "Line cook called in sick. Busy dinner rush. Food handler card preferred. Must be reliable closer.",
+                        status: "open",
+                        rescuer: null,
+                        postedAt: "18 min ago"
+                    },
+                    {
+                        id: 1002,
+                        category: "Retail",
+                        businessName: "ValueMart Supercenter",
+                        location: "Roseville, CA",
+                        time: "Tomorrow • 9:00 AM – 5:00 PM",
+                        pay: "$18.50/hr",
+                        description: "Cashier called out. Need help with stocking + customer service for weekend prep day.",
+                        status: "rescued",
+                        rescuer: "Jordan Lee",
+                        postedAt: "1 hr ago"
+                    },
+                    {
+                        id: 1003,
+                        category: "Medical Non-Essential",
+                        businessName: "MediQuick Family Clinic",
+                        location: "Sacramento, CA (Midtown)",
+                        time: "Today • 1:00 PM – 5:00 PM",
+                        pay: "$24/hr",
+                        description: "Front desk / admin coverage needed. Patient check-in, phones, and basic scheduling. Non-clinical role.",
+                        status: "open",
+                        rescuer: null,
+                        postedAt: "47 min ago"
+                    },
+                    {
+                        id: 1004,
+                        category: "Fast Food",
+                        businessName: "TacoStop Cantina",
+                        location: "Natomas, Sacramento, CA",
+                        time: "Tomorrow • 11:00 AM – 4:00 PM",
+                        pay: "$19.75/hr",
+                        description: "Prep cook + cashier combo shift. Previous day posting for coverage.",
+                        status: "open",
+                        rescuer: null,
+                        postedAt: "3 hrs ago"
+                    }
+                ];
+                savePosts();
+            }
+
+            if (savedWorker) workerProfile = JSON.parse(savedWorker);
+            if (savedBusiness) businessProfile = JSON.parse(savedBusiness);
+            if (savedRatings) ratings = JSON.parse(savedRatings);
+        }
+
+        function savePosts() {
+            localStorage.setItem('cistyr_posts', JSON.stringify(posts));
+        }
+
+        function saveWorkerProfileData() {
+            localStorage.setItem('cistyr_worker', JSON.stringify(workerProfile));
+        }
+
+        function saveBusinessProfileData() {
+            localStorage.setItem('cistyr_business', JSON.stringify(businessProfile));
+        }
+
+        function saveRatings() {
+            localStorage.setItem('cistyr_ratings', JSON.stringify(ratings));
+        }
+
+        // Render worker profile summary card
+        function renderWorkerProfileSummary() {
+            const container = document.getElementById('worker-profile-summary');
+            if (!container) return;
+
+            if (!workerProfile.name) {
+                container.innerHTML = `
+                    <div class="text-center py-6">
+                        <i class="fa-solid fa-user-plus text-4xl text-emerald-300 mb-3"></i>
+                        <p class="text-sm font-medium">No profile yet</p>
+                        <button onclick="showWorkerProfileModal()"
+                                class="mt-4 text-xs bg-emerald-600 text-white px-5 py-2 rounded-2xl font-semibold">
+                            Create Profile
+                        </button>
+                    </div>
+                `;
+                document.getElementById('resume-status').innerHTML = 'No resume uploaded';
+                return;
+            }
+
+            // Add rating stats if available
+            const stats = getWorkerRatingStats(workerProfile.name);
+            let statsHTML = '';
+            if (stats) {
+                statsHTML = `
+                    <div class="mt-4 pt-4 border-t">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="text-xs font-semibold text-emerald-600">YOUR RESCUER RATING (${stats.totalRatings} reviews)</div>
+                            <button onclick="showWorkerReviewsModal()"
+                                    class="text-xs px-3 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-2xl font-medium transition-colors">
+                                View Details →
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                            <div class="bg-emerald-50 rounded-2xl p-2">
+                                <div class="font-bold text-emerald-700">${stats.onTimePercent}%</div>
+                                <div class="text-emerald-600">On Time</div>
+                            </div>
+                            <div class="bg-emerald-50 rounded-2xl p-2">
+                                <div class="font-bold text-emerald-700">${stats.performedPercent}%</div>
+                                <div class="text-emerald-600">Performed Well</div>
+                            </div>
+                            <div class="bg-emerald-50 rounded-2xl p-2">
+                                <div class="font-bold text-emerald-700">${stats.rehirePercent}%</div>
+                                <div class="text-emerald-600">Would Rehire</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            let cats = '';
+            if (workerProfile.categories && workerProfile.categories.length > 0) {
+                cats = workerProfile.categories.map(c =>
+                    `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-full">${c}</span>`
+                ).join(' ');
+            }
+
+            container.innerHTML = `
+                <div>
+                    <div class="font-bold text-xl">${workerProfile.name}</div>
+                    <div class="text-emerald-600 text-xs mt-0.5">${workerProfile.phone || ''} ${workerProfile.email ? '• ' + workerProfile.email : ''}</div>
+
+                    <div class="mt-4 flex flex-wrap gap-1.5">${cats}</div>
+
+                    ${workerProfile.availability ? `
+                    <div class="mt-3 text-xs bg-emerald-50 border border-emerald-100 rounded-2xl p-3 text-emerald-700">
+                        <span class="font-semibold">Availability:</span> ${workerProfile.availability}
+                    </div>` : ''}
+
+                    ${statsHTML}
+                </div>
+            `;
+
+            const resumeEl = document.getElementById('resume-status');
+            if (workerProfile.resumeFileName) {
+                resumeEl.innerHTML = `<span class="text-emerald-600"><i class="fa-solid fa-check-circle mr-1"></i>${workerProfile.resumeFileName}</span>`;
+            } else {
+                resumeEl.innerHTML = 'No resume uploaded yet';
+            }
+        }
+
+        // Render business profile summary
+        function renderBusinessProfileSummary() {
+            const container = document.getElementById('business-profile-summary');
+            if (!container) return;
+
+            if (!businessProfile.name) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fa-solid fa-store-slash text-3xl text-red-300 mb-2"></i>
+                        <p class="text-sm font-medium">Set up your business profile</p>
+                        <button onclick="showBusinessProfileModal()"
+                                class="mt-4 px-5 py-2 text-xs bg-red-600 hover:bg-red-700 transition-colors text-white rounded-2xl font-semibold">
+                            Create Business Profile
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="font-bold">${businessProfile.name}</div>
+                <div class="text-xs text-red-600 mt-0.5">${businessProfile.address || ''}</div>
+                <div class="text-xs mt-3 text-slate-500">${businessProfile.phone || ''} ${businessProfile.email ? '• ' + businessProfile.email : ''}</div>
+            `;
+        }
+
+        // Render all shifts (for worker view)
+        function renderShifts(filteredPosts = null) {
+            const grid = document.getElementById('shifts-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            let toShow = filteredPosts || posts;
+
+            // In worker mode, show open + rescued (but rescued can be seen)
+            toShow = toShow.filter(p => true); // all for now
+
+            if (toShow.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-8 text-slate-400">No shifts match your filters right now.</div>`;
+                return;
+            }
+
+            const openCount = posts.filter(p => p.status === 'open').length;
+            document.getElementById('open-count-badge').innerHTML = `${openCount} open`;
+            document.getElementById('open-count-badge').className = openCount > 0
+                ? 'text-xs font-mono bg-red-100 text-red-600 px-2.5 py-0.5 rounded-full'
+                : 'text-xs font-mono bg-emerald-100 text-emerald-600 px-2.5 py-0.5 rounded-full';
+
+            toShow.forEach(post => {
+                const isOpen = post.status === 'open';
+                const card = document.createElement('div');
+                card.className = `shift-card bg-white border ${isOpen ? 'border-red-100' : 'border-emerald-100'} rounded-3xl p-5 flex flex-col`;
+
+                let statusHTML = '';
+                if (isOpen) {
+                    statusHTML = `
+                        <div class="flex items-center gap-x-2">
+                            <div class="w-3 h-3 rounded-full light-red status-dot"></div>
+                            <span class="font-bold text-red-600 text-sm tracking-tight">RED LIGHT — NEEDS RESCUE</span>
+                        </div>
+                    `;
+                } else {
+                    statusHTML = `
+                        <div class="flex items-center gap-x-2">
+                            <div class="w-3 h-3 rounded-full light-green"></div>
+                            <span class="font-bold text-emerald-600 text-sm tracking-tight">GREEN LIGHT — RESCUED</span>
+                        </div>
+                        <div class="text-xs text-emerald-700 mt-0.5">by <span class="font-semibold">${post.rescuer}</span></div>
+                    `;
+                }
+
+                const categoryColor = post.category === 'Fast Food' ? 'bg-orange-100 text-orange-700' :
+                                      post.category === 'Retail' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700';
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="category-badge ${categoryColor}">${post.category}</span>
+                        </div>
+                        <div class="text-right">
+                            ${statusHTML}
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <div class="font-bold text-xl leading-tight">${post.businessName}</div>
+                        <div class="text-xs text-slate-500 flex items-center gap-x-1 mt-0.5">
+                            <i class="fa-solid fa-map-marker-alt fa-xs"></i>
+                            <span>${post.location}</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex justify-between text-sm">
+                        <div>
+                            <div class="font-mono text-xs text-slate-400">SHIFT</div>
+                            <div class="font-semibold">${post.time}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-mono text-xs text-slate-400">PAY</div>
+                            <div class="font-bold text-emerald-600">${post.pay}</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 text-xs text-slate-600 line-clamp-2">
+                        ${post.description}
+                    </div>
+
+                    <div class="mt-auto pt-4 flex items-center justify-between border-t border-slate-100">
+                        <div class="text-[10px] text-slate-400 font-mono">${post.postedAt}</div>
+
+                        ${isOpen ? `
+                            <button onclick="rescueShift(${post.id}, this)"
+                                    class="rescue-btn px-5 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-extrabold rounded-2xl flex items-center gap-x-2 shadow-sm">
+                                <i class="fa-solid fa-handshake"></i>
+                                <span>TO YOUR RESCUE</span>
+                            </button>
+                        ` : `
+                            <div class="px-5 py-2 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-2xl flex items-center gap-x-2">
+                                <i class="fa-solid fa-check-double"></i>
+                                <span>COVERED</span>
+                            </div>
+                        `}
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        function filterShifts() {
+            const category = document.getElementById('category-filter').value;
+            let filtered = posts;
+
+            if (category) {
+                filtered = posts.filter(p => p.category === category);
+            }
+
+            renderShifts(filtered);
+        }
+
+        // Switch between Worker and Business mode
+        function switchMode(mode) {
+            currentMode = mode;
+
+            const workerPanel = document.getElementById('worker-panel');
+            const businessPanel = document.getElementById('business-panel');
+            const workerToggle = document.getElementById('worker-toggle');
+            const businessToggle = document.getElementById('business-toggle');
+            const modeLabel = document.getElementById('mode-label');
+            const modeSub = document.getElementById('mode-sub');
+
+            if (mode === 'worker') {
+                workerPanel.classList.remove('hidden');
+                businessPanel.classList.add('hidden');
+
+                workerToggle.classList.add('nav-active', 'shadow');
+                businessToggle.classList.remove('nav-active', 'shadow');
+
+                modeLabel.innerHTML = `Worker Mode <span class="text-emerald-600">— To the Rescue</span>`;
+                modeSub.innerHTML = 'Browse shifts and tap "To Your Rescue" when you can cover';
+
+                renderWorkerProfileSummary();
+                renderShifts();
+            } else {
+                workerPanel.classList.add('hidden');
+                businessPanel.classList.remove('hidden');
+
+                businessToggle.classList.add('nav-active', 'shadow');
+                workerToggle.classList.remove('nav-active', 'shadow');
+
+                modeLabel.innerHTML = `Business Mode <span class="text-red-600">— Need Rescue</span>`;
+                modeSub.innerHTML = 'Post shifts instantly. Watch for the green light.';
+
+                renderBusinessProfileSummary();
+                renderMyPosts();
+            }
+        }
+
+        // Post new shift (business)
+        function postNewShift(e) {
+            e.preventDefault();
+
+            if (!businessProfile.name) {
+                showToast("Please set up your business profile first", "error");
+                showBusinessProfileModal();
+                return;
+            }
+
+            const category = document.getElementById('post-category').value;
+            const when = document.getElementById('post-when').value;
+            const start = document.getElementById('post-start-time').value;
+            const end = document.getElementById('post-end-time').value;
+            const pay = document.getElementById('post-pay').value;
+            let location = document.getElementById('post-location').value.trim();
+            const notes = document.getElementById('post-notes').value.trim();
+
+            if (!location) location = businessProfile.address || "Sacramento Metro Area";
+
+            const timeStr = `${when} • ${start} – ${end}`;
+
+            const newPost = {
+                id: Date.now(),
+                category: category,
+                businessName: businessProfile.name,
+                location: location,
+                time: timeStr,
+                pay: `$${pay}/hr`,
+                description: notes || "Last-minute coverage needed. Reliable help appreciated.",
+                status: "open",
+                rescuer: null,
+                postedAt: "Just now"
+            };
+
+            posts.unshift(newPost);
+            savePosts();
+
+            // Reset form
+            e.target.reset();
+            document.getElementById('post-start-time').value = "14:00";
+            document.getElementById('post-end-time').value = "18:00";
+            document.getElementById('post-pay').value = "21";
+
+            showToast("Shift posted! Workers can now see it with a RED light.", "success");
+
+            // Refresh views
+            renderMyPosts();
+            if (!document.getElementById('worker-panel').classList.contains('hidden')) {
+                renderShifts();
+            }
+
+            // Auto switch to show my posts if on business
+            setTimeout(() => {
+                document.getElementById('my-posts-grid').scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 600);
+        }
+
+        // Render business's own posts
+        function renderMyPosts() {
+            const grid = document.getElementById('my-posts-grid');
+            const countEl = document.getElementById('my-posts-count');
+            if (!grid || !countEl) return;
+
+            grid.innerHTML = '';
+
+            if (!businessProfile.name) {
+                grid.innerHTML = `<div class="col-span-full text-center py-6 text-sm text-slate-400">Set your business profile to see your posted shifts here.</div>`;
+                countEl.innerHTML = '0';
+                return;
+            }
+
+            const myPosts = posts.filter(p => p.businessName === businessProfile.name);
+            countEl.innerHTML = myPosts.length;
+
+            if (myPosts.length === 0) {
+                grid.innerHTML = `<div class="col-span-full bg-white border border-dashed border-red-100 rounded-3xl p-8 text-center">
+                    <i class="fa-solid fa-inbox text-red-200 text-4xl mb-3"></i>
+                    <p class="font-medium">No shifts posted yet</p>
+                    <p class="text-xs text-red-400 mt-1">Use the form above to create your first "Called in Sick" post.</p>
+                </div>`;
+                return;
+            }
+
+            myPosts.forEach(post => {
+                const isRescued = post.status === 'rescued';
+                const div = document.createElement('div');
+                div.className = `bg-white border ${isRescued ? 'border-emerald-200' : 'border-red-200'} rounded-3xl p-5`;
+
+                let statusLight = isRescued ?
+                    `<div class="flex items-center text-emerald-600"><div class="w-3 h-3 rounded-full light-green mr-2"></div> <span class="font-bold text-sm">GREEN — COVERED</span></div>` :
+                    `<div class="flex items-center text-red-600"><div class="w-3 h-3 rounded-full light-red status-dot mr-2"></div> <span class="font-bold text-sm">RED — OPEN</span></div>`;
+
+                let rescuerInfo = '';
+                if (isRescued && post.rescuer) {
+                    rescuerInfo = `<div class="mt-3 text-xs bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2 text-emerald-700">
+                        <span class="font-semibold">Rescued by:</span> ${post.rescuer}<br>
+                        <span class="text-[10px]">Contact them directly to confirm details &amp; payment.</span>
+                    </div>`;
+                }
+
+                div.innerHTML = `
+                    <div class="flex justify-between">
+                        <div>
+                            <span class="text-xs px-3 py-0.5 rounded-full font-semibold ${post.category === 'Fast Food' ? 'bg-orange-100 text-orange-700' : post.category === 'Retail' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}">${post.category}</span>
+                        </div>
+                        <div class="text-xs text-slate-400 font-mono">${post.postedAt}</div>
+                    </div>
+
+                    <div class="mt-3 font-bold">${post.time}</div>
+                    <div class="text-sm mt-0.5">${post.pay} • ${post.location}</div>
+
+                    <div class="mt-3 text-xs text-slate-600">${post.description}</div>
+
+                    <div class="mt-4">
+                        ${statusLight}
+                        ${rescuerInfo}
+                    </div>
+
+                    <div class="mt-4 flex gap-x-2">
+                        ${isRescued ? `
+                            <button onclick="markShiftComplete(${post.id}, this)"
+                                    class="flex-1 text-xs py-2 border border-emerald-300 hover:bg-emerald-50 text-emerald-700 rounded-2xl font-medium transition-colors">
+                                Mark Completed
+                            </button>
+                        ` : `
+                            <button onclick="cancelShift(${post.id}, this)"
+                                    class="flex-1 text-xs py-2 border border-red-200 hover:bg-red-50 text-red-600 rounded-2xl font-medium transition-colors">
+                                Cancel Post
+                            </button>
+                        `}
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        // Worker clicks "To Your Rescue"
+        function rescueShift(postId, buttonElement) {
+            if (!workerProfile.name) {
+                showToast("Please complete your worker profile first so businesses can contact you.", "error");
+                showWorkerProfileModal();
+                return;
+            }
+
+            const postIndex = posts.findIndex(p => p.id === postId);
+            if (postIndex === -1) return;
+
+            const post = posts[postIndex];
+
+            if (post.status === 'rescued') {
+                showToast("This shift has already been rescued.", "error");
+                return;
+            }
+
+            // Confirmation
+            if (!confirm(`Confirm you can cover this shift at ${post.businessName}?\n\nTime: ${post.time}\nPay: ${post.pay}\n\nYou will be marked as the rescuer and the light will turn GREEN.`)) {
+                return;
+            }
+
+            // Update post
+            post.status = 'rescued';
+            post.rescuer = workerProfile.name;
+
+            savePosts();
+
+            // Visual feedback on button
+            buttonElement.outerHTML = `
+                <div class="px-5 py-2 bg-emerald-600 text-white text-xs font-extrabold rounded-2xl flex items-center justify-center gap-x-2">
+                    <i class="fa-solid fa-check-double"></i>
+                    <span>YOU'RE ON IT!</span>
+                </div>
+            `;
+
+            showToast(`Great! You rescued the shift at ${post.businessName}. The business has been notified (simulated).`, "success");
+
+            // Re-render everything
+            setTimeout(() => {
+                renderShifts();
+                if (currentMode === 'business') renderMyPosts();
+            }, 800);
+        }
+
+        function markShiftComplete(postId, btn) {
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+
+            if (post.rescuer && post.status === 'rescued') {
+                // Show rating modal instead of immediate delete
+                showRescuerRatingModal(postId);
+            } else {
+                if (!confirm("Mark this shift as completed? It will be removed from active listings.")) return;
+                posts = posts.filter(p => p.id !== postId);
+                savePosts();
+                showToast("Shift marked complete.", "success");
+                renderMyPosts();
+                renderShifts();
+            }
+        }
+
+        function cancelShift(postId, btn) {
+            if (!confirm("Cancel this posted shift? Workers will no longer see it.")) return;
+
+            posts = posts.filter(p => p.id !== postId);
+            savePosts();
+
+            showToast("Shift cancelled.", "success");
+            renderMyPosts();
+            renderShifts();
+        }
+
+        // === NEW: Voluntary Rescuer Ratings ===
+        let currentRatingPostId = null;
+
+        function showRescuerRatingModal(postId) {
+            const post = posts.find(p => p.id === postId);
+            if (!post || !post.rescuer) return;
+
+            currentRatingPostId = postId;
+            const modal = document.getElementById('rating-modal');
+            document.getElementById('rating-rescuer-name').innerHTML = `Rating <span class="font-semibold">${post.rescuer}</span> for the shift at ${post.businessName}`;
+
+            const questionsContainer = document.getElementById('rating-questions');
+            questionsContainer.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <div class="font-semibold text-sm mb-2">1. Did they show up on time?</div>
+                        <div class="flex gap-3">
+                            <button onclick="selectRatingAnswer(this, 'showedUpOnTime', true)" class="flex-1 py-3 px-4 border border-emerald-200 hover:bg-emerald-50 rounded-2xl text-sm font-medium transition-colors">Yes</button>
+                            <button onclick="selectRatingAnswer(this, 'showedUpOnTime', false)" class="flex-1 py-3 px-4 border border-red-200 hover:bg-red-50 rounded-2xl text-sm font-medium transition-colors">No</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm mb-2">2. Did they perform to your satisfaction?</div>
+                        <div class="flex gap-3">
+                            <button onclick="selectRatingAnswer(this, 'performedWell', true)" class="flex-1 py-3 px-4 border border-emerald-200 hover:bg-emerald-50 rounded-2xl text-sm font-medium transition-colors">Yes</button>
+                            <button onclick="selectRatingAnswer(this, 'performedWell', false)" class="flex-1 py-3 px-4 border border-red-200 hover:bg-red-50 rounded-2xl text-sm font-medium transition-colors">No</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm mb-2">3. Would you hire them again?</div>
+                        <div class="flex gap-3">
+                            <button onclick="selectRatingAnswer(this, 'wouldHireAgain', true)" class="flex-1 py-3 px-4 border border-emerald-200 hover:bg-emerald-50 rounded-2xl text-sm font-medium transition-colors">Yes</button>
+                            <button onclick="selectRatingAnswer(this, 'wouldHireAgain', false)" class="flex-1 py-3 px-4 border border-red-200 hover:bg-red-50 rounded-2xl text-sm font-medium transition-colors">No</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Store answers temporarily on the modal element
+            modal.dataset.answers = JSON.stringify({});
+            modal.style.display = 'flex';
+        }
+
+        function selectRatingAnswer(btn, key, value) {
+            const modal = document.getElementById('rating-modal');
+            let answers = JSON.parse(modal.dataset.answers || '{}');
+            answers[key] = value;
+            modal.dataset.answers = JSON.stringify(answers);
+
+            // Visual feedback - highlight selected
+            const parent = btn.parentElement;
+            parent.querySelectorAll('button').forEach(b => {
+                b.classList.remove('bg-emerald-600', 'text-white', 'border-emerald-600');
+                b.classList.add('border-slate-200');
+            });
+            if (value) {
+                btn.classList.add('bg-emerald-600', 'text-white', 'border-emerald-600');
+            } else {
+                btn.classList.add('bg-red-600', 'text-white', 'border-red-600');
+            }
+        }
+
+        function submitRescuerRating() {
+            const modal = document.getElementById('rating-modal');
+            const answers = JSON.parse(modal.dataset.answers || '{}');
+            const post = posts.find(p => p.id === currentRatingPostId);
+
+            if (!post || !post.rescuer) {
+                hideRatingModal();
+                return;
+            }
+
+            // Save rating
+            const newRating = {
+                rescuerName: post.rescuer,
+                postId: currentRatingPostId,
+                businessName: post.businessName,
+                showedUpOnTime: answers.showedUpOnTime ?? null,
+                performedWell: answers.performedWell ?? null,
+                wouldHireAgain: answers.wouldHireAgain ?? null,
+                ratedAt: new Date().toISOString()
+            };
+
+            ratings.push(newRating);
+            saveRatings();
+
+            // Remove the post
+            posts = posts.filter(p => p.id !== currentRatingPostId);
+            savePosts();
+
+            hideRatingModal();
+            showToast("Thank you! Rating submitted. Shift marked complete.", "success");
+            renderMyPosts();
+            renderShifts();
+
+            // Refresh worker profile stats if viewing as worker
+            if (currentMode === 'worker') {
+                renderWorkerProfileSummary();
+            }
+        }
+
+        function skipRatingAndComplete() {
+            const post = posts.find(p => p.id === currentRatingPostId);
+            if (post) {
+                posts = posts.filter(p => p.id !== currentRatingPostId);
+                savePosts();
+            }
+            hideRatingModal();
+            showToast("Shift marked complete (no rating given).", "success");
+            renderMyPosts();
+            renderShifts();
+        }
+
+        function hideRatingModal() {
+            const modal = document.getElementById('rating-modal');
+            modal.style.display = 'none';
+            modal.dataset.answers = '{}';
+            currentRatingPostId = null;
+        }
+
+        // Show individual reviews for the current worker
+        function showWorkerReviewsModal() {
+            if (!workerProfile.name) return;
+
+            const workerRatings = ratings
+                .filter(r => r.rescuerName === workerProfile.name)
+                .sort((a, b) => new Date(b.ratedAt) - new Date(a.ratedAt)); // newest first
+
+            const modal = document.getElementById('reviews-modal');
+            const listContainer = document.getElementById('reviews-list');
+            const countEl = document.getElementById('reviews-count');
+
+            countEl.innerHTML = `${workerRatings.length} review${workerRatings.length !== 1 ? 's' : ''}`;
+            listContainer.innerHTML = '';
+
+            if (workerRatings.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-8 text-slate-400">
+                        <i class="fa-solid fa-inbox text-4xl mb-3"></i>
+                        <p>No reviews yet.</p>
+                        <p class="text-xs mt-1">Complete more shifts to start receiving feedback.</p>
+                    </div>
+                `;
+            } else {
+                workerRatings.forEach(rating => {
+                    const date = new Date(rating.ratedAt);
+                    const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' • ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                    const onTimeIcon = rating.showedUpOnTime ?
+                        `<span class="text-emerald-600"><i class="fa-solid fa-check-circle"></i> Yes</span>` :
+                        `<span class="text-red-600"><i class="fa-solid fa-times-circle"></i> No</span>`;
+
+                    const performedIcon = rating.performedWell ?
+                        `<span class="text-emerald-600"><i class="fa-solid fa-check-circle"></i> Yes</span>` :
+                        `<span class="text-red-600"><i class="fa-solid fa-times-circle"></i> No</span>`;
+
+                    const rehireIcon = rating.wouldHireAgain ?
+                        `<span class="text-emerald-600"><i class="fa-solid fa-check-circle"></i> Yes</span>` :
+                        `<span class="text-red-600"><i class="fa-solid fa-times-circle"></i> No</span>`;
+
+                    const reviewHTML = `
+                        <div class="border border-slate-200 rounded-3xl p-5">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <div class="font-semibold">${rating.businessName}</div>
+                                    <div class="text-xs text-slate-400">${dateStr}</div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-600">Showed up on time</span>
+                                    <span class="font-medium">${onTimeIcon}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-600">Performed to satisfaction</span>
+                                    <span class="font-medium">${performedIcon}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-slate-600">Would hire again</span>
+                                    <span class="font-medium">${rehireIcon}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    listContainer.innerHTML += reviewHTML;
+                });
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function hideReviewsModal() {
+            document.getElementById('reviews-modal').style.display = 'none';
+        }
+
+        // Helper to calculate worker rating stats
+        function getWorkerRatingStats(workerName) {
+            const workerRatings = ratings.filter(r => r.rescuerName === workerName);
+            if (workerRatings.length === 0) return null;
+
+            const total = workerRatings.length;
+            const onTime = workerRatings.filter(r => r.showedUpOnTime === true).length;
+            const performed = workerRatings.filter(r => r.performedWell === true).length;
+            const rehire = workerRatings.filter(r => r.wouldHireAgain === true).length;
+
+            return {
+                totalRatings: total,
+                onTimePercent: Math.round((onTime / total) * 100),
+                performedPercent: Math.round((performed / total) * 100),
+                rehirePercent: Math.round((rehire / total) * 100)
+            };
+        }
+
+        // Handle resume file (demo only)
+        function handleResumeUpload(input) {
+            if (input.files.length > 0) {
+                const file = input.files[0];
+                workerProfile.resumeFileName = file.name;
+
+                const filenameEl = document.getElementById('resume-filename');
+                if (filenameEl) filenameEl.innerHTML = `<span class="text-emerald-600 font-medium">${file.name}</span>`;
+
+                // Auto-save partial
+                saveWorkerProfileData();
+            }
+        }
+
+        // Show / hide modals
+        function showWorkerProfileModal() {
+            const modal = document.getElementById('worker-modal');
+            modal.style.display = 'flex';
+
+            // Prefill
+            document.getElementById('worker-name').value = workerProfile.name || '';
+            document.getElementById('worker-phone').value = workerProfile.phone || '';
+            document.getElementById('worker-email').value = workerProfile.email || '';
+            document.getElementById('worker-availability').value = workerProfile.availability || '';
+
+            // Categories checkboxes
+            const catContainer = document.getElementById('worker-categories');
+            catContainer.innerHTML = '';
+
+            CATEGORIES.forEach(cat => {
+                const checked = workerProfile.categories && workerProfile.categories.includes(cat);
+                const label = document.createElement('label');
+                label.className = `flex items-center gap-x-2 text-sm px-4 py-2 border rounded-2xl cursor-pointer transition-colors ${checked ? 'bg-emerald-50 border-emerald-300' : 'border-slate-200 hover:bg-slate-50'}`;
+
+                label.innerHTML = `
+                    <input type="checkbox" value="${cat}" ${checked ? 'checked' : ''} class="accent-emerald-600">
+                    <span>${cat}</span>
+                `;
+
+                // Toggle style on change
+                const checkbox = label.querySelector('input');
+                checkbox.onchange = () => {
+                    if (checkbox.checked) {
+                        label.classList.add('bg-emerald-50', 'border-emerald-300');
+                        label.classList.remove('border-slate-200');
+                    } else {
+                        label.classList.remove('bg-emerald-50', 'border-emerald-300');
+                        label.classList.add('border-slate-200');
+                    }
+                };
+
+                catContainer.appendChild(label);
+            });
+
+            // Resume filename
+            const resumeEl = document.getElementById('resume-filename');
+            resumeEl.innerHTML = workerProfile.resumeFileName ?
+                `<span class="font-medium text-emerald-600">${workerProfile.resumeFileName}</span>` :
+                `<span class="text-slate-400">No file selected</span>`;
+        }
+
+        function hideWorkerProfileModal() {
+            document.getElementById('worker-modal').style.display = 'none';
+        }
+
+        function saveWorkerProfile() {
+            workerProfile.name = document.getElementById('worker-name').value.trim();
+            workerProfile.phone = document.getElementById('worker-phone').value.trim();
+            workerProfile.email = document.getElementById('worker-email').value.trim();
+            workerProfile.availability = document.getElementById('worker-availability').value.trim();
+
+            // Categories
+            const checkedBoxes = document.querySelectorAll('#worker-categories input[type="checkbox"]:checked');
+            workerProfile.categories = Array.from(checkedBoxes).map(cb => cb.value);
+
+            // resumeFileName already set via handleResumeUpload if changed
+
+            if (!workerProfile.name) {
+                alert("Please enter at least your name.");
+                return;
+            }
+
+            saveWorkerProfileData();
+            hideWorkerProfileModal();
+
+            renderWorkerProfileSummary();
+            showToast("Profile saved! You're ready to rescue shifts.", "success");
+        }
+
+        function showBusinessProfileModal() {
+            const modal = document.getElementById('business-modal');
+            modal.style.display = 'flex';
+
+            document.getElementById('business-name').value = businessProfile.name || '';
+            document.getElementById('business-phone').value = businessProfile.phone || '';
+            document.getElementById('business-email').value = businessProfile.email || '';
+            document.getElementById('business-address').value = businessProfile.address || '';
+        }
+
+        function hideBusinessProfileModal() {
+            document.getElementById('business-modal').style.display = 'none';
+        }
+
+        function saveBusinessProfile() {
+            businessProfile.name = document.getElementById('business-name').value.trim();
+            businessProfile.phone = document.getElementById('business-phone').value.trim();
+            businessProfile.email = document.getElementById('business-email').value.trim();
+            businessProfile.address = document.getElementById('business-address').value.trim();
+
+            if (!businessProfile.name) {
+                alert("Business name is required.");
+                return;
+            }
+
+            saveBusinessProfileData();
+            hideBusinessProfileModal();
+
+            renderBusinessProfileSummary();
+            renderMyPosts();
+            showToast("Business profile saved. You can now post shifts.", "success");
+        }
+
+        // Toast notifications
+        function showToast(message, type = "success") {
+            const container = document.getElementById('toast-container');
+
+            const toast = document.createElement('div');
+            toast.className = `demo-toast max-w-xs px-5 py-3.5 rounded-2xl shadow-xl text-sm flex items-start gap-x-3 border ${type === 'success' ? 'bg-emerald-600 border-emerald-700 text-white' : 'bg-red-600 border-red-700 text-white'}`;
+
+            toast.innerHTML = `
+                <div class="pt-0.5">
+                    <i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                </div>
+                <div class="flex-1 pr-1">${message}</div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.transition = 'all 0.3s ease';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 250);
+            }, 4200);
+        }
+
+        function showAllShifts() {
+            switchMode('worker');
+            document.getElementById('shifts-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Clear filters
+            document.getElementById('category-filter').value = '';
+            renderShifts();
+        }
+
+        function resetDemoData() {
+            if (!confirm("Reset all demo data and profiles? This cannot be undone.")) return;
+
+            localStorage.removeItem('cistyr_posts');
+            localStorage.removeItem('cistyr_worker');
+            localStorage.removeItem('cistyr_business');
+
+            location.reload();
+        }
+
+        // Initialize everything
+        function initializeApp() {
+            initTailwind();
+            loadData();
+
+            // Initial mode: Worker (most common starting point)
+            switchMode('worker');
+
+            // Seed some initial profile for better demo experience (optional)
+            if (!workerProfile.name) {
+                // Don't auto-create, let user do it. But we can hint.
+            }
+
+            // Keyboard escape for modals
+            document.addEventListener('keydown', function(e) {
+                if (e.key === "Escape") {
+                    const modals = document.querySelectorAll('.fixed.inset-0[style*="flex"]');
+                    if (modals.length > 0) modals[modals.length-1].style.display = 'none';
+                }
+            });
+
+            // Bonus: Show a welcome toast once
+            setTimeout(() => {
+                if (!localStorage.getItem('cistyr_welcomed')) {
+                    // showToast("Welcome to CISTYR! This is a fully interactive demo. Try switching modes and posting a shift.", "success");
+                    localStorage.setItem('cistyr_welcomed', 'true');
+                }
+            }, 6500);
+
+            // Make sure filters work
+            console.log('%c[CISTYR] MVP initialized successfully. cistyr.org ready for development.', 'color:#166534');
+        }
+
+        // Boot app
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>
