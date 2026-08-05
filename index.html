@@ -474,8 +474,8 @@
                         <button type="button" id="role-business" onclick="setSignupRole('business')" class="flex-1 py-2.5 px-3 rounded-2xl text-sm font-semibold border transition-colors bg-white text-slate-600 border-slate-200 hover:bg-slate-50">Business (employer)</button>
                     </div>
                     <input type="hidden" id="signup-role" value="worker">
-                    <label id="signup-name-label" class="text-xs font-bold tracking-wider text-slate-500">YOUR FULL NAME</label>
-                    <input id="signup-name" type="text" placeholder="Alex Rivera" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm">
+                    <label id="signup-name-label" class="text-xs font-bold tracking-wider text-slate-500">PROFILE NAME (SHOWN PUBLICLY)</label>
+                    <input id="signup-name" type="text" placeholder="e.g. RescuerRex" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm">
                 </div>
                 <div>
                     <label class="text-xs font-bold tracking-wider text-slate-500">EMAIL</label>
@@ -508,8 +508,8 @@
             
             <div class="space-y-5">
                 <div>
-                    <label class="text-xs font-bold tracking-wider text-slate-500">FULL NAME</label>
-                    <input id="worker-name" type="text" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="Alex Rivera">
+                    <label class="text-xs font-bold tracking-wider text-slate-500">PROFILE NAME (shown publicly — not your real name)</label>
+                    <input id="worker-name" type="text" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="e.g. RescuerRex or Reliable_Alex">
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -715,7 +715,7 @@
             const h=Math.floor(m/60); if(h<24) return h+' hr'+(h>1?'s':'')+' ago';
             const dd=Math.floor(h/24); return dd+' day'+(dd>1?'s':'')+' ago';
         }
-        const SHIFT_SELECT = '*, business:cistyr_profiles!cistyr_shifts_business_id_fkey(business_name), rescuer:cistyr_profiles!cistyr_shifts_rescuer_id_fkey(full_name)';
+        const SHIFT_SELECT = '*, business:cistyr_profiles!cistyr_shifts_business_id_fkey(business_name), rescuer:cistyr_profiles!cistyr_shifts_rescuer_id_fkey(display_name)';
         function mapShift(r){
             return {
                 id: r.id,
@@ -728,32 +728,51 @@
                 pay: fmtPay(r.pay_rate),
                 description: r.notes || '',
                 status: r.status,
-                rescuer: (r.rescuer && r.rescuer.full_name) || null,
+                rescuer: (r.rescuer && r.rescuer.display_name) || null,
                 postedAt: relTime(r.created_at)
             };
         }
 
         // ===== Data loading =====
+        let contactsById = {};
+        function collectCounterpartyIds(){
+            const ids = new Set();
+            posts.forEach(p => {
+                if(myRole==='business' && p.businessId===currentUser.id && p.rescuerId) ids.add(p.rescuerId);
+                if(myRole==='worker' && p.rescuerId===currentUser.id && p.businessId) ids.add(p.businessId);
+            });
+            return Array.from(ids);
+        }
+        async function loadContacts(){
+            contactsById = {};
+            const ids = collectCounterpartyIds();
+            if(ids.length===0) return;
+            const { data } = await sb.from('cistyr_contacts').select('id, full_name, phone, email, address').in('id', ids);
+            (data||[]).forEach(cc => { contactsById[cc.id] = cc; });
+        }
         async function loadData(){
             let { data: prof } = await sb.from('cistyr_profiles').select('*').eq('id', currentUser.id).maybeSingle();
             if(!prof){
                 const md = currentUser.user_metadata || {};
                 const role = md.cistyr_role || 'worker';
-                const ins = { id: currentUser.id, role, email: currentUser.email };
-                if(role==='business') ins.business_name = md.business_name || ''; else ins.full_name = md.full_name || '';
+                const ins = { id: currentUser.id, role };
+                if(role==='business') ins.business_name = md.business_name || ''; else ins.display_name = md.display_name || '';
                 const r = await sb.from('cistyr_profiles').insert(ins).select('*').single();
                 prof = r.data;
             }
             myProfile = prof; myRole = prof ? prof.role : 'worker';
+            const { data: contact } = await sb.from('cistyr_contacts').select('*').eq('id', currentUser.id).maybeSingle();
+            const ct = contact || {};
             if(myRole==='worker'){
-                workerProfile = { name: prof.full_name||'', phone: prof.phone||'', email: prof.email||'', availability: prof.availability||'', categories: prof.categories||[], resumeFileName: prof.resume_filename||'' };
+                workerProfile = { name: prof.display_name||'', phone: ct.phone||'', email: ct.email||'', availability: ct.availability||'', categories: prof.categories||[], resumeFileName: ct.resume_filename||'' };
                 businessProfile = {};
             } else {
-                businessProfile = { name: prof.business_name||'', phone: prof.phone||'', email: prof.email||'', address: prof.address||'' };
+                businessProfile = { name: prof.business_name||'', phone: ct.phone||'', email: ct.email||'', address: ct.address||'' };
                 workerProfile = {};
             }
             const { data: shifts } = await sb.from('cistyr_shifts').select(SHIFT_SELECT).in('status',['open','rescued']).order('created_at',{ascending:false});
             posts = (shifts||[]).map(mapShift);
+            await loadContacts();
             if(myRole==='worker'){
                 const { data: rt } = await sb.from('cistyr_ratings').select('*, business:cistyr_profiles!cistyr_ratings_business_id_fkey(business_name)').eq('worker_id', currentUser.id).order('created_at',{ascending:false});
                 ratings = (rt||[]).map(r=>({
@@ -770,6 +789,7 @@
         async function refreshBoard(){
             const { data: shifts } = await sb.from('cistyr_shifts').select(SHIFT_SELECT).in('status',['open','rescued']).order('created_at',{ascending:false});
             posts = (shifts||[]).map(mapShift);
+            await loadContacts();
             renderShifts();
             if(currentMode==='business') renderMyPosts();
         }
@@ -790,7 +810,7 @@
             const lbl = document.getElementById('signup-name-label');
             const inp = document.getElementById('signup-name');
             if(role==='business'){ lbl.innerText='BUSINESS / LOCATION NAME'; inp.placeholder='QuickBite Burgers - Broadway'; }
-            else { lbl.innerText='YOUR FULL NAME'; inp.placeholder='Alex Rivera'; }
+            else { lbl.innerText='PROFILE NAME (SHOWN PUBLICLY)'; inp.placeholder='e.g. RescuerRex'; }
         }
         function setSignupRole(role){
             document.getElementById('signup-role').value = role;
@@ -803,6 +823,7 @@
             document.getElementById('auth-title').innerText = mode==='signup' ? 'Create your CISTYR account' : 'Welcome back';
             document.getElementById('auth-submit').innerText = mode==='signup' ? 'Create account' : 'Sign in';
             document.getElementById('auth-signup-fields').style.display = mode==='signup' ? 'block' : 'none';
+            if(mode==='signup') updateRoleField();
             document.getElementById('auth-switch-text').innerHTML = mode==='signup'
                 ? `Already have an account? <button type="button" onclick="setAuthMode('signin')" class="text-emerald-700 font-semibold underline">Sign in</button>`
                 : `New to CISTYR? <button type="button" onclick="setAuthMode('signup')" class="text-emerald-700 font-semibold underline">Create an account</button>`;
@@ -818,7 +839,7 @@
                     const role = document.getElementById('signup-role').value;
                     const name = document.getElementById('signup-name').value.trim();
                     if(!name){ showToast('Please enter your name.','error'); return; }
-                    const meta = role==='business' ? { cistyr_role:'business', business_name:name } : { cistyr_role:'worker', full_name:name };
+                    const meta = role==='business' ? { cistyr_role:'business', business_name:name } : { cistyr_role:'worker', display_name:name };
                     const { data, error } = await sb.auth.signUp({ email, password, options:{ data: meta } });
                     if(error){ showToast(error.message,'error'); return; }
                     if(!data.session){ showToast('Account created! Check your email to confirm, then sign in.','success'); setAuthMode('signin'); return; }
@@ -1014,6 +1035,7 @@
                 
                 const categoryColor = post.category === 'Fast Food' ? 'bg-orange-100 text-orange-700' : 
                                       post.category === 'Retail' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700';
+                const bizContact = (currentUser && post.rescuerId===currentUser.id && contactsById[post.businessId]) ? contactsById[post.businessId] : null;
                 
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
@@ -1047,6 +1069,7 @@
                     <div class="mt-3 text-xs text-slate-600 line-clamp-2">
                         ${post.description}
                     </div>
+                    ${bizContact ? `<div class="mt-2 text-[11px] font-medium text-emerald-700"><i class="fa-solid fa-address-card mr-1"></i>Business contact: ${bizContact.phone||''}${bizContact.phone&&bizContact.email?' &bull; ':''}${bizContact.email||''}</div>` : ''}
                     
                     <div class="mt-auto pt-4 flex items-center justify-between border-t border-slate-100">
                         <div class="text-[10px] text-slate-400 font-mono">${post.postedAt}</div>
@@ -1194,9 +1217,13 @@
                 
                 let rescuerInfo = '';
                 if (isRescued && post.rescuer) {
+                    const rc = contactsById[post.rescuerId] || {};
+                    const rcLine = (rc.phone || rc.email)
+                        ? `${rc.phone||''}${rc.phone&&rc.email?' &bull; ':''}${rc.email||''} — contact to confirm details &amp; payment.`
+                        : 'Contact details will appear here.';
                     rescuerInfo = `<div class="mt-3 text-xs bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2 text-emerald-700">
                         <span class="font-semibold">Rescued by:</span> ${post.rescuer}<br>
-                        <span class="text-[10px]">Contact them directly to confirm details &amp; payment.</span>
+                        <span class="text-[10px]">${rcLine}</span>
                     </div>`;
                 }
                 
@@ -1489,7 +1516,7 @@
                 workerProfile.resumeFileName = file.name;
                 const filenameEl = document.getElementById('resume-filename');
                 if (filenameEl) filenameEl.innerHTML = `<span class="text-emerald-600 font-medium">${file.name}</span>`;
-                if(currentUser){ await sb.from('cistyr_profiles').update({ resume_filename: file.name }).eq('id', currentUser.id); }
+                if(currentUser){ await sb.from('cistyr_contacts').upsert({ id: currentUser.id, resume_filename: file.name }); }
             }
         }
 
@@ -1553,11 +1580,13 @@
             workerProfile.categories = Array.from(checkedBoxes).map(cb => cb.value);
             if (!workerProfile.name) { alert("Please enter at least your name."); return; }
             const { error } = await sb.from('cistyr_profiles').update({
-                full_name: workerProfile.name, phone: workerProfile.phone, email: workerProfile.email,
-                availability: workerProfile.availability, categories: workerProfile.categories,
-                resume_filename: workerProfile.resumeFileName || null
+                display_name: workerProfile.name, categories: workerProfile.categories
             }).eq('id', currentUser.id);
-            if(error){ showToast('Could not save profile: '+error.message,'error'); return; }
+            const { error: cerr } = await sb.from('cistyr_contacts').upsert({
+                id: currentUser.id, phone: workerProfile.phone, email: workerProfile.email,
+                availability: workerProfile.availability, resume_filename: workerProfile.resumeFileName || null
+            });
+            if(error || cerr){ showToast('Could not save profile: '+((error||cerr).message),'error'); return; }
             hideWorkerProfileModal();
             renderWorkerProfileSummary();
             showToast("Profile saved! You're ready to rescue shifts.", "success");
@@ -1584,10 +1613,13 @@
             businessProfile.address = document.getElementById('business-address').value.trim();
             if (!businessProfile.name) { alert("Business name is required."); return; }
             const { error } = await sb.from('cistyr_profiles').update({
-                business_name: businessProfile.name, phone: businessProfile.phone,
-                email: businessProfile.email, address: businessProfile.address
+                business_name: businessProfile.name
             }).eq('id', currentUser.id);
-            if(error){ showToast('Could not save profile: '+error.message,'error'); return; }
+            const { error: cerr } = await sb.from('cistyr_contacts').upsert({
+                id: currentUser.id, phone: businessProfile.phone,
+                email: businessProfile.email, address: businessProfile.address
+            });
+            if(error || cerr){ showToast('Could not save profile: '+((error||cerr).message),'error'); return; }
             hideBusinessProfileModal();
             renderBusinessProfileSummary();
             renderMyPosts();
