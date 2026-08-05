@@ -428,10 +428,10 @@
                         <button type="submit" 
                                 class="mt-6 w-full bg-red-600 hover:bg-red-700 active:bg-red-800 transition-colors text-white font-bold py-4 rounded-3xl flex items-center justify-center gap-x-3 text-base shadow-inner">
                             <i class="fa-solid fa-paper-plane"></i>
-                            <span>PUBLISH SHIFT — START RECEIVING RESCUES</span>
+                            <span>PAY $6.25 &amp; PUBLISH SHIFT</span>
                         </button>
                         
-                        <p class="text-center text-[10px] text-red-400 mt-3">This will appear instantly on the worker board with a RED light</p>
+                        <p class="text-center text-[10px] text-red-400 mt-3">Secure Stripe checkout — $6.25 per posting. Your shift goes live the moment payment succeeds.</p>
                     </form>
                 </div>
                 
@@ -850,6 +850,30 @@
             } finally { btn.disabled=false; btn.innerText=label; }
         }
         async function cistyrSignOut(){ await sb.auth.signOut(); }
+        async function handlePaymentReturn(){
+            const u = new URL(window.location.href);
+            const paid = u.searchParams.get('cistyr_paid');
+            const canceled = u.searchParams.get('cistyr_canceled');
+            if(paid){
+                showToast('Confirming your payment…','success');
+                try{
+                    const { data } = await sb.functions.invoke('cistyr-confirm', { body: { session_id: paid } });
+                    if(data && data.ok){
+                        await refreshBoard();
+                        switchMode('business');
+                        showToast('Payment received — your shift is now live on the board!','success');
+                    } else {
+                        showToast('Payment not confirmed yet. If you were charged, your shift will appear shortly.','error');
+                    }
+                }catch(_){ showToast('Could not confirm payment right now.','error'); }
+                u.searchParams.delete('cistyr_paid');
+                history.replaceState({}, document.title, u.pathname + u.search + u.hash);
+            } else if(canceled){
+                showToast('Checkout canceled — your shift was not posted.','error');
+                u.searchParams.delete('cistyr_canceled');
+                history.replaceState({}, document.title, u.pathname + u.search + u.hash);
+            }
+        }
         function cistyrStart(role){
             if(!currentUser){ setAuthMode('signup'); setSignupRole(role); showAuthModal(); return; }
             if(role===myRole){ switchMode(myRole); document.getElementById('main-app').scrollIntoView({behavior:'smooth'}); }
@@ -872,6 +896,7 @@
                 await loadData();
                 lockRoleUI();
                 switchMode(myRole);
+                await handlePaymentReturn();
             } else {
                 loadedUserId = null;
                 posts=[]; ratings=[]; workerProfile={}; businessProfile={}; myRole=null; myProfile=null;
@@ -1142,7 +1167,7 @@
             }
         }
         
-        // Post new shift (business)
+        // Post new shift (business) — requires a $6.25 payment via Stripe
         async function postNewShift(e) {
             e.preventDefault();
             if(!requireAuth()) return;
@@ -1161,23 +1186,23 @@
             const notes = document.getElementById('post-notes').value.trim();
             if (!location) location = businessProfile.address || "Sacramento Metro Area";
             const timeStr = `${when} • ${start} – ${end}`;
-            const { data, error } = await sb.from('cistyr_shifts').insert({
-                business_id: currentUser.id,
-                category: category, when_label: when, start_time: start, end_time: end,
+            const btn = e.target.querySelector('button[type="submit"]');
+            if(btn){ btn.disabled = true; }
+            showToast("Redirecting to secure checkout ($6.25)…", "success");
+            const { data, error } = await sb.functions.invoke('cistyr-checkout', { body: {
+                category, when_label: when, start_time: start, end_time: end,
                 time_label: timeStr, pay_rate: parseFloat(pay)||0,
-                location: location, notes: notes || "Last-minute coverage needed. Reliable help appreciated.",
-                status: 'open'
-            }).select(SHIFT_SELECT).single();
-            if(error){ showToast('Could not post shift: '+error.message,'error'); return; }
-            posts.unshift(mapShift(data));
-            e.target.reset();
-            document.getElementById('post-start-time').value = "14:00";
-            document.getElementById('post-end-time').value = "18:00";
-            document.getElementById('post-pay').value = "21";
-            showToast("Shift posted! Workers can now see it with a RED light.", "success");
-            renderMyPosts();
-            if (!document.getElementById('worker-panel').classList.contains('hidden')) { renderShifts(); }
-            setTimeout(() => { document.getElementById('my-posts-grid').scrollIntoView({ behavior: "smooth", block: "center" }); }, 600);
+                location, notes: notes || "Last-minute coverage needed. Reliable help appreciated."
+            }});
+            if(error || !data || !data.url){
+                if(btn){ btn.disabled = false; }
+                let msg = 'Could not start checkout.';
+                if (data && data.error) msg = data.error;
+                else if (error) { try { const j = await error.context.json(); if(j && j.error) msg = j.error; } catch(_) { msg = error.message || msg; } }
+                showToast(msg, "error");
+                return;
+            }
+            window.location.href = data.url;
         }
 
         // Render business's own posts
