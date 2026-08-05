@@ -6,6 +6,7 @@
     <title>CISTYR • Called in Sick, To Your Rescue</title>
     <link rel="icon" type="image/jpeg" href="assets/icon.jpg">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Poppins:wght@600&amp;display=swap');
@@ -154,12 +155,12 @@
                     </p>
                     
                     <div class="flex flex-wrap gap-3">
-                        <button onclick="switchMode('worker'); document.getElementById('main-app').scrollIntoView({ behavior: 'smooth' })" 
+                        <button onclick="cistyrStart('worker')" 
                                 class="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-3xl flex items-center gap-x-3 shadow-xl hover:shadow-2xl active:scale-[0.985] transition-all text-lg">
                             <i class="fa-solid fa-user-check"></i>
                             <span>I'm Ready to Rescue</span>
                         </button>
-                        <button onclick="switchMode('business'); document.getElementById('main-app').scrollIntoView({ behavior: 'smooth' })" 
+                        <button onclick="cistyrStart('business')" 
                                 class="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 font-semibold rounded-3xl flex items-center gap-x-3 transition-all text-lg text-slate-700">
                             <i class="fa-solid fa-exclamation-triangle"></i>
                             <span>Post a Called-In-Sick Shift</span>
@@ -451,6 +452,45 @@
         </div>
     </div>
 
+    <!-- Auth bar (signed in) -->
+    <div id="auth-bar" style="display:none" class="fixed top-3 right-3 z-[95] items-center gap-x-3 bg-white/90 backdrop-blur border border-slate-200 rounded-2xl px-4 py-2 shadow-lg text-sm">
+        <span id="auth-bar-email" class="text-slate-600 font-medium"></span>
+        <button onclick="cistyrSignOut()" class="px-3 py-1 bg-slate-800 hover:bg-black text-white rounded-xl text-xs font-semibold">Sign out</button>
+    </div>
+
+    <!-- Auth modal -->
+    <div id="auth-modal" style="display:none" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl">
+            <div class="flex items-center gap-x-3">
+                <img src="assets/logo.jpg" alt="CISTYR" class="h-9 w-auto rounded">
+            </div>
+            <h2 id="auth-title" class="font-bold text-2xl mt-4">Welcome back</h2>
+            <p class="text-sm text-slate-500 mb-6">Sign in to post or rescue shifts.</p>
+            <form onsubmit="cistyrSubmitAuth(event)" class="space-y-4">
+                <div id="auth-signup-fields" style="display:none">
+                    <label class="text-xs font-bold tracking-wider text-slate-500">I AM A…</label>
+                    <div class="flex gap-2 mt-1.5 mb-3">
+                        <button type="button" id="role-worker" onclick="setSignupRole('worker')" class="flex-1 py-2.5 px-3 rounded-2xl text-sm font-semibold border transition-colors bg-emerald-600 text-white border-emerald-600">Worker (job seeker)</button>
+                        <button type="button" id="role-business" onclick="setSignupRole('business')" class="flex-1 py-2.5 px-3 rounded-2xl text-sm font-semibold border transition-colors bg-white text-slate-600 border-slate-200 hover:bg-slate-50">Business (employer)</button>
+                    </div>
+                    <input type="hidden" id="signup-role" value="worker">
+                    <label id="signup-name-label" class="text-xs font-bold tracking-wider text-slate-500">YOUR FULL NAME</label>
+                    <input id="signup-name" type="text" placeholder="Alex Rivera" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-bold tracking-wider text-slate-500">EMAIL</label>
+                    <input id="auth-email" type="email" required placeholder="you@email.com" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm">
+                </div>
+                <div>
+                    <label class="text-xs font-bold tracking-wider text-slate-500">PASSWORD</label>
+                    <input id="auth-password" type="password" required placeholder="Your password" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm">
+                </div>
+                <button type="submit" id="auth-submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl transition-colors">Sign in</button>
+            </form>
+            <p id="auth-switch-text" class="text-center text-sm text-slate-500 mt-5"></p>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-y-2"></div>
 
@@ -635,7 +675,7 @@
             <div class="flex items-center gap-x-4">
                 <span>CA-focused • Built for compliance &amp; speed</span>
                 <span class="hidden md:inline">•</span>
-                <button onclick="resetDemoData()" class="hover:text-slate-500 underline">Reset Demo Data</button>
+                <button onclick="resetDemoData()" class="hover:text-slate-500 underline">Sign out</button>
             </div>
         </div>
     </footer>
@@ -646,100 +686,179 @@
             document.documentElement.style.setProperty('--accent', '#059669');
         }
         
-        // Data storage
+        // ===== Supabase config =====
+        const SB_URL = 'https://nwwkiljmxbtzoxafsesq.supabase.co';
+        const SB_KEY = 'sb_publishable_FUZwE9jkUe_H7PNUuGkivQ_Fnp8KCbe';
+        const sb = window.supabase.createClient(SB_URL, SB_KEY);
+
+        // ===== App state =====
         let posts = [];
         let workerProfile = {};
         let businessProfile = {};
         let ratings = [];
         let currentMode = 'worker';
-        
+        let currentUser = null;
+        let myProfile = null;
+        let myRole = null;
+        let authMode = 'signin';
+        let loadedUserId = null;
+
         const CATEGORIES = ["Fast Food", "Retail", "Medical Non-Essential"];
-        
-        // Load from localStorage
-        function loadData() {
-            const savedPosts = localStorage.getItem('cistyr_posts');
-            const savedWorker = localStorage.getItem('cistyr_worker');
-            const savedBusiness = localStorage.getItem('cistyr_business');
-            const savedRatings = localStorage.getItem('cistyr_ratings');
-            
-            if (savedPosts) {
-                posts = JSON.parse(savedPosts);
-            } else {
-                // Seed demo data
-                posts = [
-                    {
-                        id: 1001,
-                        category: "Fast Food",
-                        businessName: "QuickBite Burgers",
-                        location: "Downtown Sacramento, CA",
-                        time: "Today • 2:00 PM – 6:00 PM",
-                        pay: "$22/hr",
-                        description: "Line cook called in sick. Busy dinner rush. Food handler card preferred. Must be reliable closer.",
-                        status: "open",
-                        rescuer: null,
-                        postedAt: "18 min ago"
-                    },
-                    {
-                        id: 1002,
-                        category: "Retail",
-                        businessName: "ValueMart Supercenter",
-                        location: "Roseville, CA",
-                        time: "Tomorrow • 9:00 AM – 5:00 PM",
-                        pay: "$18.50/hr",
-                        description: "Cashier called out. Need help with stocking + customer service for weekend prep day.",
-                        status: "rescued",
-                        rescuer: "Jordan Lee",
-                        postedAt: "1 hr ago"
-                    },
-                    {
-                        id: 1003,
-                        category: "Medical Non-Essential",
-                        businessName: "MediQuick Family Clinic",
-                        location: "Sacramento, CA (Midtown)",
-                        time: "Today • 1:00 PM – 5:00 PM",
-                        pay: "$24/hr",
-                        description: "Front desk / admin coverage needed. Patient check-in, phones, and basic scheduling. Non-clinical role.",
-                        status: "open",
-                        rescuer: null,
-                        postedAt: "47 min ago"
-                    },
-                    {
-                        id: 1004,
-                        category: "Fast Food",
-                        businessName: "TacoStop Cantina",
-                        location: "Natomas, Sacramento, CA",
-                        time: "Tomorrow • 11:00 AM – 4:00 PM",
-                        pay: "$19.75/hr",
-                        description: "Prep cook + cashier combo shift. Previous day posting for coverage.",
-                        status: "open",
-                        rescuer: null,
-                        postedAt: "3 hrs ago"
-                    }
-                ];
-                savePosts();
+
+        // ===== Helpers =====
+        function fmtPay(v){ if(v==null) return ''; const n=Number(v); return '$'+(Number.isInteger(n)? n : n.toFixed(2))+'/hr'; }
+        function relTime(ts){
+            if(!ts) return '';
+            const d=new Date(ts), s=Math.floor((Date.now()-d.getTime())/1000);
+            if(s<60) return 'Just now';
+            const m=Math.floor(s/60); if(m<60) return m+' min ago';
+            const h=Math.floor(m/60); if(h<24) return h+' hr'+(h>1?'s':'')+' ago';
+            const dd=Math.floor(h/24); return dd+' day'+(dd>1?'s':'')+' ago';
+        }
+        const SHIFT_SELECT = '*, business:cistyr_profiles!cistyr_shifts_business_id_fkey(business_name), rescuer:cistyr_profiles!cistyr_shifts_rescuer_id_fkey(full_name)';
+        function mapShift(r){
+            return {
+                id: r.id,
+                rescuerId: r.rescuer_id,
+                businessId: r.business_id,
+                category: r.category,
+                businessName: (r.business && r.business.business_name) || 'A business',
+                location: r.location || '',
+                time: r.time_label || '',
+                pay: fmtPay(r.pay_rate),
+                description: r.notes || '',
+                status: r.status,
+                rescuer: (r.rescuer && r.rescuer.full_name) || null,
+                postedAt: relTime(r.created_at)
+            };
+        }
+
+        // ===== Data loading =====
+        async function loadData(){
+            let { data: prof } = await sb.from('cistyr_profiles').select('*').eq('id', currentUser.id).maybeSingle();
+            if(!prof){
+                const md = currentUser.user_metadata || {};
+                const role = md.cistyr_role || 'worker';
+                const ins = { id: currentUser.id, role, email: currentUser.email };
+                if(role==='business') ins.business_name = md.business_name || ''; else ins.full_name = md.full_name || '';
+                const r = await sb.from('cistyr_profiles').insert(ins).select('*').single();
+                prof = r.data;
             }
-            
-            if (savedWorker) workerProfile = JSON.parse(savedWorker);
-            if (savedBusiness) businessProfile = JSON.parse(savedBusiness);
-            if (savedRatings) ratings = JSON.parse(savedRatings);
+            myProfile = prof; myRole = prof ? prof.role : 'worker';
+            if(myRole==='worker'){
+                workerProfile = { name: prof.full_name||'', phone: prof.phone||'', email: prof.email||'', availability: prof.availability||'', categories: prof.categories||[], resumeFileName: prof.resume_filename||'' };
+                businessProfile = {};
+            } else {
+                businessProfile = { name: prof.business_name||'', phone: prof.phone||'', email: prof.email||'', address: prof.address||'' };
+                workerProfile = {};
+            }
+            const { data: shifts } = await sb.from('cistyr_shifts').select(SHIFT_SELECT).in('status',['open','rescued']).order('created_at',{ascending:false});
+            posts = (shifts||[]).map(mapShift);
+            if(myRole==='worker'){
+                const { data: rt } = await sb.from('cistyr_ratings').select('*, business:cistyr_profiles!cistyr_ratings_business_id_fkey(business_name)').eq('worker_id', currentUser.id).order('created_at',{ascending:false});
+                ratings = (rt||[]).map(r=>({
+                    rescuerName: workerProfile.name,
+                    postId: r.shift_id,
+                    businessName: (r.business && r.business.business_name) || 'A business',
+                    showedUpOnTime: r.scores ? r.scores.showedUpOnTime : null,
+                    performedWell: r.scores ? r.scores.performedWell : null,
+                    wouldHireAgain: r.scores ? r.scores.wouldHireAgain : null,
+                    ratedAt: r.created_at
+                }));
+            } else { ratings = []; }
         }
-        
-        function savePosts() {
-            localStorage.setItem('cistyr_posts', JSON.stringify(posts));
+        async function refreshBoard(){
+            const { data: shifts } = await sb.from('cistyr_shifts').select(SHIFT_SELECT).in('status',['open','rescued']).order('created_at',{ascending:false});
+            posts = (shifts||[]).map(mapShift);
+            renderShifts();
+            if(currentMode==='business') renderMyPosts();
         }
-        
-        function saveWorkerProfileData() {
-            localStorage.setItem('cistyr_worker', JSON.stringify(workerProfile));
+        // legacy no-ops (writes now go straight to Supabase)
+        function savePosts(){}
+        function saveWorkerProfileData(){}
+        function saveBusinessProfileData(){}
+        function saveRatings(){}
+
+        // ===== Auth UI =====
+        function showAuthModal(){ document.getElementById('auth-modal').style.display='flex'; }
+        function hideAuthModal(){ document.getElementById('auth-modal').style.display='none'; }
+        function roleBtnClass(active){
+            return 'flex-1 py-2.5 px-3 rounded-2xl text-sm font-semibold border transition-colors ' + (active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50');
         }
-        
-        function saveBusinessProfileData() {
-            localStorage.setItem('cistyr_business', JSON.stringify(businessProfile));
+        function updateRoleField(){
+            const role = document.getElementById('signup-role').value;
+            const lbl = document.getElementById('signup-name-label');
+            const inp = document.getElementById('signup-name');
+            if(role==='business'){ lbl.innerText='BUSINESS / LOCATION NAME'; inp.placeholder='QuickBite Burgers - Broadway'; }
+            else { lbl.innerText='YOUR FULL NAME'; inp.placeholder='Alex Rivera'; }
         }
-        
-        function saveRatings() {
-            localStorage.setItem('cistyr_ratings', JSON.stringify(ratings));
+        function setSignupRole(role){
+            document.getElementById('signup-role').value = role;
+            document.getElementById('role-worker').className = roleBtnClass(role==='worker');
+            document.getElementById('role-business').className = roleBtnClass(role==='business');
+            updateRoleField();
         }
-        
+        function setAuthMode(mode){
+            authMode = mode;
+            document.getElementById('auth-title').innerText = mode==='signup' ? 'Create your CISTYR account' : 'Welcome back';
+            document.getElementById('auth-submit').innerText = mode==='signup' ? 'Create account' : 'Sign in';
+            document.getElementById('auth-signup-fields').style.display = mode==='signup' ? 'block' : 'none';
+            document.getElementById('auth-switch-text').innerHTML = mode==='signup'
+                ? `Already have an account? <button type="button" onclick="setAuthMode('signin')" class="text-emerald-700 font-semibold underline">Sign in</button>`
+                : `New to CISTYR? <button type="button" onclick="setAuthMode('signup')" class="text-emerald-700 font-semibold underline">Create an account</button>`;
+        }
+        async function cistyrSubmitAuth(e){
+            if(e) e.preventDefault();
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            if(!email || !password){ showToast('Enter your email and password.','error'); return; }
+            const btn = document.getElementById('auth-submit'); const label = btn.innerText; btn.disabled=true; btn.innerText='Please wait…';
+            try{
+                if(authMode==='signup'){
+                    const role = document.getElementById('signup-role').value;
+                    const name = document.getElementById('signup-name').value.trim();
+                    if(!name){ showToast('Please enter your name.','error'); return; }
+                    const meta = role==='business' ? { cistyr_role:'business', business_name:name } : { cistyr_role:'worker', full_name:name };
+                    const { data, error } = await sb.auth.signUp({ email, password, options:{ data: meta } });
+                    if(error){ showToast(error.message,'error'); return; }
+                    if(!data.session){ showToast('Account created! Check your email to confirm, then sign in.','success'); setAuthMode('signin'); return; }
+                } else {
+                    const { error } = await sb.auth.signInWithPassword({ email, password });
+                    if(error){ showToast(error.message,'error'); return; }
+                }
+            } finally { btn.disabled=false; btn.innerText=label; }
+        }
+        async function cistyrSignOut(){ await sb.auth.signOut(); }
+        function cistyrStart(role){
+            if(!currentUser){ setAuthMode('signup'); setSignupRole(role); showAuthModal(); return; }
+            if(role===myRole){ switchMode(myRole); document.getElementById('main-app').scrollIntoView({behavior:'smooth'}); }
+            else { showToast('This is a '+myRole+' account. Sign out to use CISTYR as a '+role+'.','error'); }
+        }
+        function requireAuth(){ if(!currentUser){ setAuthMode('signin'); showAuthModal(); return false; } return true; }
+        function lockRoleUI(){
+            const wt=document.getElementById('worker-toggle'), bt=document.getElementById('business-toggle');
+            if(myRole==='worker'){ if(bt) bt.style.display='none'; if(wt) wt.style.display=''; }
+            else { if(wt) wt.style.display='none'; if(bt) bt.style.display=''; }
+            const bar=document.getElementById('auth-bar');
+            if(bar){ bar.style.display='flex'; document.getElementById('auth-bar-email').innerText = (currentUser?currentUser.email:'') + ' • ' + myRole; }
+        }
+        async function applySession(s){
+            currentUser = s ? s.user : null;
+            if(currentUser){
+                if(loadedUserId === currentUser.id) return;
+                loadedUserId = currentUser.id;
+                hideAuthModal();
+                await loadData();
+                lockRoleUI();
+                switchMode(myRole);
+            } else {
+                loadedUserId = null;
+                posts=[]; ratings=[]; workerProfile={}; businessProfile={}; myRole=null; myProfile=null;
+                const bar=document.getElementById('auth-bar'); if(bar) bar.style.display='none';
+                showAuthModal();
+            }
+        }
+
         // Render worker profile summary card
         function renderWorkerProfileSummary() {
             const container = document.getElementById('worker-profile-summary');
@@ -933,7 +1052,7 @@
                         <div class="text-[10px] text-slate-400 font-mono">${post.postedAt}</div>
                         
                         ${isOpen ? `
-                            <button onclick="rescueShift(${post.id}, this)" 
+                            <button onclick="rescueShift('${post.id}', this)" 
                                     class="rescue-btn px-5 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-extrabold rounded-2xl flex items-center gap-x-2 shadow-sm">
                                 <i class="fa-solid fa-handshake"></i>
                                 <span>TO YOUR RESCUE</span>
@@ -1001,15 +1120,15 @@
         }
         
         // Post new shift (business)
-        function postNewShift(e) {
+        async function postNewShift(e) {
             e.preventDefault();
-            
+            if(!requireAuth()) return;
+            if(myRole!=='business'){ showToast('Only business accounts can post shifts.','error'); return; }
             if (!businessProfile.name) {
                 showToast("Please set up your business profile first", "error");
                 showBusinessProfileModal();
                 return;
             }
-            
             const category = document.getElementById('post-category').value;
             const when = document.getElementById('post-when').value;
             const start = document.getElementById('post-start-time').value;
@@ -1017,47 +1136,27 @@
             const pay = document.getElementById('post-pay').value;
             let location = document.getElementById('post-location').value.trim();
             const notes = document.getElementById('post-notes').value.trim();
-            
             if (!location) location = businessProfile.address || "Sacramento Metro Area";
-            
             const timeStr = `${when} • ${start} – ${end}`;
-            
-            const newPost = {
-                id: Date.now(),
-                category: category,
-                businessName: businessProfile.name,
-                location: location,
-                time: timeStr,
-                pay: `$${pay}/hr`,
-                description: notes || "Last-minute coverage needed. Reliable help appreciated.",
-                status: "open",
-                rescuer: null,
-                postedAt: "Just now"
-            };
-            
-            posts.unshift(newPost);
-            savePosts();
-            
-            // Reset form
+            const { data, error } = await sb.from('cistyr_shifts').insert({
+                business_id: currentUser.id,
+                category: category, when_label: when, start_time: start, end_time: end,
+                time_label: timeStr, pay_rate: parseFloat(pay)||0,
+                location: location, notes: notes || "Last-minute coverage needed. Reliable help appreciated.",
+                status: 'open'
+            }).select(SHIFT_SELECT).single();
+            if(error){ showToast('Could not post shift: '+error.message,'error'); return; }
+            posts.unshift(mapShift(data));
             e.target.reset();
             document.getElementById('post-start-time').value = "14:00";
             document.getElementById('post-end-time').value = "18:00";
             document.getElementById('post-pay').value = "21";
-            
             showToast("Shift posted! Workers can now see it with a RED light.", "success");
-            
-            // Refresh views
             renderMyPosts();
-            if (!document.getElementById('worker-panel').classList.contains('hidden')) {
-                renderShifts();
-            }
-            
-            // Auto switch to show my posts if on business
-            setTimeout(() => {
-                document.getElementById('my-posts-grid').scrollIntoView({ behavior: "smooth", block: "center" });
-            }, 600);
+            if (!document.getElementById('worker-panel').classList.contains('hidden')) { renderShifts(); }
+            setTimeout(() => { document.getElementById('my-posts-grid').scrollIntoView({ behavior: "smooth", block: "center" }); }, 600);
         }
-        
+
         // Render business's own posts
         function renderMyPosts() {
             const grid = document.getElementById('my-posts-grid');
@@ -1121,12 +1220,12 @@
                     
                     <div class="mt-4 flex gap-x-2">
                         ${isRescued ? `
-                            <button onclick="markShiftComplete(${post.id}, this)" 
+                            <button onclick="markShiftComplete('${post.id}', this)" 
                                     class="flex-1 text-xs py-2 border border-emerald-300 hover:bg-emerald-50 text-emerald-700 rounded-2xl font-medium transition-colors">
                                 Mark Completed
                             </button>
                         ` : `
-                            <button onclick="cancelShift(${post.id}, this)" 
+                            <button onclick="cancelShift('${post.id}', this)" 
                                     class="flex-1 text-xs py-2 border border-red-200 hover:bg-red-50 text-red-600 rounded-2xl font-medium transition-colors">
                                 Cancel Post
                             </button>
@@ -1138,77 +1237,57 @@
         }
         
         // Worker clicks "To Your Rescue"
-        function rescueShift(postId, buttonElement) {
+        async function rescueShift(postId, buttonElement) {
+            if(!requireAuth()) return;
+            if(myRole!=='worker'){ showToast('Only worker accounts can rescue shifts.','error'); return; }
             if (!workerProfile.name) {
                 showToast("Please complete your worker profile first so businesses can contact you.", "error");
                 showWorkerProfileModal();
                 return;
             }
-            
-            const postIndex = posts.findIndex(p => p.id === postId);
-            if (postIndex === -1) return;
-            
-            const post = posts[postIndex];
-            
-            if (post.status === 'rescued') {
-                showToast("This shift has already been rescued.", "error");
-                return;
-            }
-            
-            // Confirmation
-            if (!confirm(`Confirm you can cover this shift at ${post.businessName}?\n\nTime: ${post.time}\nPay: ${post.pay}\n\nYou will be marked as the rescuer and the light will turn GREEN.`)) {
-                return;
-            }
-            
-            // Update post
-            post.status = 'rescued';
-            post.rescuer = workerProfile.name;
-            
-            savePosts();
-            
-            // Visual feedback on button
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+            if (post.status === 'rescued') { showToast("This shift has already been rescued.", "error"); return; }
+            if (!confirm(`Confirm you can cover this shift at ${post.businessName}?\n\nTime: ${post.time}\nPay: ${post.pay}\n\nYou will be marked as the rescuer and the light will turn GREEN.`)) { return; }
+            const { data, error } = await sb.from('cistyr_shifts')
+                .update({ status:'rescued', rescuer_id: currentUser.id })
+                .eq('id', postId).eq('status','open')
+                .select(SHIFT_SELECT).maybeSingle();
+            if (error) { showToast('Could not rescue: '+error.message,'error'); return; }
+            if (!data) { showToast('Sorry — someone just grabbed this one. Refreshing…','error'); await refreshBoard(); return; }
+            Object.assign(post, mapShift(data));
             buttonElement.outerHTML = `
                 <div class="px-5 py-2 bg-emerald-600 text-white text-xs font-extrabold rounded-2xl flex items-center justify-center gap-x-2">
                     <i class="fa-solid fa-check-double"></i>
                     <span>YOU'RE ON IT!</span>
                 </div>
             `;
-            
-            showToast(`Great! You rescued the shift at ${post.businessName}. The business has been notified (simulated).`, "success");
-            
-            // Re-render everything
-            setTimeout(() => {
-                renderShifts();
-                if (currentMode === 'business') renderMyPosts();
-            }, 800);
+            showToast(`Great! You rescued the shift at ${post.businessName}. The business can now see you as the rescuer.`, "success");
+            setTimeout(() => { renderShifts(); if (currentMode === 'business') renderMyPosts(); }, 800);
         }
-        
-        function markShiftComplete(postId, btn) {
+
+        async function markShiftComplete(postId, btn) {
             const post = posts.find(p => p.id === postId);
             if (!post) return;
-
             if (post.rescuer && post.status === 'rescued') {
-                // Show rating modal instead of immediate delete
                 showRescuerRatingModal(postId);
             } else {
                 if (!confirm("Mark this shift as completed? It will be removed from active listings.")) return;
+                const { error } = await sb.from('cistyr_shifts').update({ status:'completed' }).eq('id', postId);
+                if(error){ showToast('Could not update: '+error.message,'error'); return; }
                 posts = posts.filter(p => p.id !== postId);
-                savePosts();
                 showToast("Shift marked complete.", "success");
-                renderMyPosts();
-                renderShifts();
+                renderMyPosts(); renderShifts();
             }
         }
-        
-        function cancelShift(postId, btn) {
+
+        async function cancelShift(postId, btn) {
             if (!confirm("Cancel this posted shift? Workers will no longer see it.")) return;
-            
+            const { error } = await sb.from('cistyr_shifts').update({ status:'cancelled' }).eq('id', postId);
+            if(error){ showToast('Could not cancel: '+error.message,'error'); return; }
             posts = posts.filter(p => p.id !== postId);
-            savePosts();
-            
             showToast("Shift cancelled.", "success");
-            renderMyPosts();
-            renderShifts();
+            renderMyPosts(); renderShifts();
         }
 
         // === NEW: Voluntary Rescuer Ratings ===
@@ -1273,55 +1352,33 @@
             }
         }
 
-        function submitRescuerRating() {
+        async function submitRescuerRating() {
             const modal = document.getElementById('rating-modal');
             const answers = JSON.parse(modal.dataset.answers || '{}');
             const post = posts.find(p => p.id === currentRatingPostId);
-
-            if (!post || !post.rescuer) {
-                hideRatingModal();
-                return;
-            }
-
-            // Save rating
-            const newRating = {
-                rescuerName: post.rescuer,
-                postId: currentRatingPostId,
-                businessName: post.businessName,
-                showedUpOnTime: answers.showedUpOnTime ?? null,
-                performedWell: answers.performedWell ?? null,
-                wouldHireAgain: answers.wouldHireAgain ?? null,
-                ratedAt: new Date().toISOString()
-            };
-
-            ratings.push(newRating);
-            saveRatings();
-
-            // Remove the post
+            if (!post || !post.rescuer) { hideRatingModal(); return; }
+            const { error: rerr } = await sb.from('cistyr_ratings').insert({
+                shift_id: post.id, worker_id: post.rescuerId, business_id: currentUser.id,
+                scores: { showedUpOnTime: answers.showedUpOnTime ?? null, performedWell: answers.performedWell ?? null, wouldHireAgain: answers.wouldHireAgain ?? null }
+            });
+            if(rerr){ showToast('Could not save rating: '+rerr.message,'error'); }
+            await sb.from('cistyr_shifts').update({ status:'completed' }).eq('id', post.id);
             posts = posts.filter(p => p.id !== currentRatingPostId);
-            savePosts();
-
             hideRatingModal();
             showToast("Thank you! Rating submitted. Shift marked complete.", "success");
-            renderMyPosts();
-            renderShifts();
-            
-            // Refresh worker profile stats if viewing as worker
-            if (currentMode === 'worker') {
-                renderWorkerProfileSummary();
-            }
+            renderMyPosts(); renderShifts();
+            if (currentMode === 'worker') { renderWorkerProfileSummary(); }
         }
 
-        function skipRatingAndComplete() {
+        async function skipRatingAndComplete() {
             const post = posts.find(p => p.id === currentRatingPostId);
             if (post) {
+                await sb.from('cistyr_shifts').update({ status:'completed' }).eq('id', post.id);
                 posts = posts.filter(p => p.id !== currentRatingPostId);
-                savePosts();
             }
             hideRatingModal();
             showToast("Shift marked complete (no rating given).", "success");
-            renderMyPosts();
-            renderShifts();
+            renderMyPosts(); renderShifts();
         }
 
         function hideRatingModal() {
@@ -1425,20 +1482,17 @@
             };
         }
         
-        // Handle resume file (demo only)
-        function handleResumeUpload(input) {
+        // Handle resume file (stores filename only)
+        async function handleResumeUpload(input) {
             if (input.files.length > 0) {
                 const file = input.files[0];
                 workerProfile.resumeFileName = file.name;
-                
                 const filenameEl = document.getElementById('resume-filename');
                 if (filenameEl) filenameEl.innerHTML = `<span class="text-emerald-600 font-medium">${file.name}</span>`;
-                
-                // Auto-save partial
-                saveWorkerProfileData();
+                if(currentUser){ await sb.from('cistyr_profiles').update({ resume_filename: file.name }).eq('id', currentUser.id); }
             }
         }
-        
+
         // Show / hide modals
         function showWorkerProfileModal() {
             const modal = document.getElementById('worker-modal');
@@ -1490,30 +1544,25 @@
             document.getElementById('worker-modal').style.display = 'none';
         }
         
-        function saveWorkerProfile() {
+        async function saveWorkerProfile() {
             workerProfile.name = document.getElementById('worker-name').value.trim();
             workerProfile.phone = document.getElementById('worker-phone').value.trim();
             workerProfile.email = document.getElementById('worker-email').value.trim();
             workerProfile.availability = document.getElementById('worker-availability').value.trim();
-            
-            // Categories
             const checkedBoxes = document.querySelectorAll('#worker-categories input[type="checkbox"]:checked');
             workerProfile.categories = Array.from(checkedBoxes).map(cb => cb.value);
-            
-            // resumeFileName already set via handleResumeUpload if changed
-            
-            if (!workerProfile.name) {
-                alert("Please enter at least your name.");
-                return;
-            }
-            
-            saveWorkerProfileData();
+            if (!workerProfile.name) { alert("Please enter at least your name."); return; }
+            const { error } = await sb.from('cistyr_profiles').update({
+                full_name: workerProfile.name, phone: workerProfile.phone, email: workerProfile.email,
+                availability: workerProfile.availability, categories: workerProfile.categories,
+                resume_filename: workerProfile.resumeFileName || null
+            }).eq('id', currentUser.id);
+            if(error){ showToast('Could not save profile: '+error.message,'error'); return; }
             hideWorkerProfileModal();
-            
             renderWorkerProfileSummary();
             showToast("Profile saved! You're ready to rescue shifts.", "success");
         }
-        
+
         function showBusinessProfileModal() {
             const modal = document.getElementById('business-modal');
             modal.style.display = 'flex';
@@ -1528,25 +1577,23 @@
             document.getElementById('business-modal').style.display = 'none';
         }
         
-        function saveBusinessProfile() {
+        async function saveBusinessProfile() {
             businessProfile.name = document.getElementById('business-name').value.trim();
             businessProfile.phone = document.getElementById('business-phone').value.trim();
             businessProfile.email = document.getElementById('business-email').value.trim();
             businessProfile.address = document.getElementById('business-address').value.trim();
-            
-            if (!businessProfile.name) {
-                alert("Business name is required.");
-                return;
-            }
-            
-            saveBusinessProfileData();
+            if (!businessProfile.name) { alert("Business name is required."); return; }
+            const { error } = await sb.from('cistyr_profiles').update({
+                business_name: businessProfile.name, phone: businessProfile.phone,
+                email: businessProfile.email, address: businessProfile.address
+            }).eq('id', currentUser.id);
+            if(error){ showToast('Could not save profile: '+error.message,'error'); return; }
             hideBusinessProfileModal();
-            
             renderBusinessProfileSummary();
             renderMyPosts();
             showToast("Business profile saved. You can now post shifts.", "success");
         }
-        
+
         // Toast notifications
         function showToast(message, type = "success") {
             const container = document.getElementById('toast-container');
@@ -1578,51 +1625,23 @@
             renderShifts();
         }
         
-        function resetDemoData() {
-            if (!confirm("Reset all demo data and profiles? This cannot be undone.")) return;
-            
-            localStorage.removeItem('cistyr_posts');
-            localStorage.removeItem('cistyr_worker');
-            localStorage.removeItem('cistyr_business');
-            
-            location.reload();
-        }
-        
+        function resetDemoData() { cistyrSignOut(); }
+
         // Initialize everything
-        function initializeApp() {
+        async function cistyrBoot(){
             initTailwind();
-            loadData();
-            
-            // Initial mode: Worker (most common starting point)
-            switchMode('worker');
-            
-            // Seed some initial profile for better demo experience (optional)
-            if (!workerProfile.name) {
-                // Don't auto-create, let user do it. But we can hint.
-            }
-            
-            // Keyboard escape for modals
-            document.addEventListener('keydown', function(e) {
+            document.addEventListener('keydown', function(e){
                 if (e.key === "Escape") {
                     const modals = document.querySelectorAll('.fixed.inset-0[style*="flex"]');
                     if (modals.length > 0) modals[modals.length-1].style.display = 'none';
                 }
             });
-            
-            // Bonus: Show a welcome toast once
-            setTimeout(() => {
-                if (!localStorage.getItem('cistyr_welcomed')) {
-                    // showToast("Welcome to CISTYR! This is a fully interactive demo. Try switching modes and posting a shift.", "success");
-                    localStorage.setItem('cistyr_welcomed', 'true');
-                }
-            }, 6500);
-            
-            // Make sure filters work
-            console.log('%c[CISTYR] MVP initialized successfully. cistyr.org ready for development.', 'color:#166534');
+            setAuthMode('signin');
+            sb.auth.onAuthStateChange((_event, s) => { applySession(s); });
+            const { data:{ session } } = await sb.auth.getSession();
+            await applySession(session);
         }
-        
-        // Boot app
-        window.onload = initializeApp;
+        window.onload = cistyrBoot;
     </script>
 </body>
 </html>
