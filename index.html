@@ -1975,7 +1975,15 @@
             sb.auth.onAuthStateChange((_event, s) => { applySession(s); });
             const { data:{ session } } = await sb.auth.getSession();
             await applySession(session);
-            try{ const sl=localStorage.getItem('cistyr_lang'); if(sl==='es') applyLang('es'); }catch(_){}
+            try{
+                let sl = null;
+                try{ sl = localStorage.getItem('cistyr_lang'); }catch(_){}
+                if(!sl){
+                    const langs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || navigator.userLanguage || ''];
+                    if(langs.some(l => String(l).toLowerCase().startsWith('es'))) sl = 'es';
+                }
+                if(sl==='es') applyLang('es');
+            }catch(_){}
         }
         window.onload = cistyrBoot;
     </script>
