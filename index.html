@@ -115,6 +115,12 @@
                         <span>Browse All</span>
                     </button>
                     
+                    <!-- Language toggle -->
+                    <div class="flex items-center bg-slate-100 rounded-3xl p-1 ml-1">
+                        <button id="lang-en" onclick="setLang('en')" class="px-2.5 py-1 rounded-2xl text-xs font-bold transition-colors bg-emerald-600 text-white">EN</button>
+                        <button id="lang-es" onclick="setLang('es')" class="px-2.5 py-1 rounded-2xl text-xs font-bold transition-colors text-slate-600">ES</button>
+                    </div>
+
                     <!-- Role Toggle -->
                     <div class="flex items-center bg-slate-100 rounded-3xl p-1 shadow-inner ml-2">
                         <button id="worker-toggle"
@@ -340,6 +346,14 @@
                                 <i class="fa-solid fa-location-dot"></i>
                                 <span class="hidden sm:inline">Near me</span>
                             </button>
+
+                            <select id="distance-filter" onchange="onDistanceFilterChange()"
+                                    class="bg-white border border-slate-300 text-xs rounded-2xl px-3 py-2 focus:outline-none focus:border-emerald-400">
+                                <option value="">Any distance</option>
+                                <option value="10">Within 10 mi</option>
+                                <option value="25">Within 25 mi</option>
+                                <option value="50">Within 50 mi</option>
+                            </select>
                         </div>
                     </div>
                     
@@ -788,6 +802,177 @@
             );
         }
 
+        // ===== i18n (English / Spanish) =====
+        let currentLang = 'en';
+        const _i18nOrig = new WeakMap();
+        const I18N_ES = {
+            // nav
+            "How it Works":"Cómo funciona","Browse All":"Ver todos","Worker":"Trabajador","Business":"Negocio",
+            "Sign in":"Iniciar sesión","Sign out":"Cerrar sesión",
+            // hero
+            "Same-day & next-day temp staffing":"Personal temporal para hoy y mañana",
+            "Called in Sick.":"Se reportó enfermo.","To Your Rescue.":"A tu rescate.",
+            "Instant matching for fast food, retail & medical support shifts when plans change.":"Emparejamiento instantáneo para turnos de comida rápida, comercio y apoyo médico cuando los planes cambian.",
+            "I'm Ready to Rescue":"Estoy listo para ayudar","Post a Called-In-Sick Shift":"Publicar un turno por enfermedad",
+            // how it works
+            "SIMPLE • FAST • DIRECT":"SIMPLE • RÁPIDO • DIRECTO","How CISTYR Works":"Cómo funciona CISTYR",
+            "No middlemen. No recruiters. Just real people helping real businesses when it matters most.":"Sin intermediarios. Sin reclutadores. Solo personas reales ayudando a negocios reales cuando más importa.",
+            "For Workers":"Para trabajadores","Pick up shifts fast":"Toma turnos rápido",
+            "Create profile & upload resume":"Crea tu perfil y sube tu currículum",
+            "Takes 60 seconds. Add your categories & availability.":"Toma 60 segundos. Agrega tus categorías y disponibilidad.",
+            "Browse \"Called in Sick\" posts":"Explora las publicaciones \"por enfermedad\"",
+            "Filter by category, time, and location near you.":"Filtra por categoría, hora y ubicación cerca de ti.",
+            "Tap":"Toca","\"To Your Rescue\"":"\"A tu rescate\"",
+            "Instant green light. Business gets notified. You get the shift.":"Luz verde al instante. El negocio recibe aviso. Tú obtienes el turno.",
+            "Show up & get paid":"Preséntate y cobra",
+            "Direct with the business. Keep 100% of your earnings.":"Directo con el negocio. Quédate con el 100% de tus ingresos.",
+            "For Businesses":"Para negocios","Fill gaps in minutes":"Cubre vacantes en minutos",
+            "Set up your business profile":"Configura el perfil de tu negocio",
+            "Name, location, contact. One-time setup.":"Nombre, ubicación, contacto. Configuración única.",
+            "Post a \"Called in Sick\" shift":"Publica un turno \"por enfermedad\"",
+            "Choose category • time • pay. Goes live instantly.":"Elige categoría • hora • pago. Se publica al instante.",
+            "Watch the light turn green":"Observa cómo la luz se pone verde",
+            "When a worker taps \"To Your Rescue\", you get matched instantly.":"Cuando un trabajador toca \"A tu rescate\", se emparejan al instante.",
+            "Confirm & operate":"Confirma y opera",
+            "Direct coordination. No platform fees on the shift itself.":"Coordinación directa. Sin comisiones de plataforma sobre el turno.",
+            "CISTYR is a direct matching platform. Businesses and workers handle all payments, scheduling, and compliance directly. Always verify qualifications and follow CA labor laws.":"CISTYR es una plataforma de emparejamiento directo. Los negocios y trabajadores gestionan pagos, horarios y cumplimiento directamente. Verifica siempre las cualificaciones y cumple las leyes laborales de California.",
+            // app / board
+            "Demo data saved in your browser":"Datos guardados en tu navegador",
+            "Your Worker Profile":"Tu perfil de trabajador","Edit":"Editar","No resume uploaded yet":"Aún no has subido currículum",
+            "Available Rescue Shifts":"Turnos disponibles","All Categories":"Todas las categorías",
+            "Fast Food":"Comida rápida","Retail":"Comercio","Medical Non-Essential":"Médico no esencial",
+            "🍔 Fast Food":"🍔 Comida rápida","🛍️ Retail":"🛍️ Comercio","🏥 Medical Non-Essential":"🏥 Médico no esencial",
+            "Filter":"Filtrar","Near me":"Cerca de mí",
+            "Any distance":"Cualquier distancia","Within 10 mi":"A menos de 10 mi","Within 25 mi":"A menos de 25 mi","Within 50 mi":"A menos de 50 mi",
+            "Shifts shown are same-day or next-day only • Sacramento & surrounding areas":"Solo se muestran turnos de hoy o mañana • Sacramento y alrededores",
+            "Your Business Profile":"Tu perfil de negocio","POST NEW CALLED-IN-SICK SHIFT":"PUBLICAR NUEVO TURNO POR ENFERMEDAD",
+            "CATEGORY":"CATEGORÍA","WHEN":"CUÁNDO","Today (Same Day)":"Hoy (mismo día)","Tomorrow":"Mañana",
+            "START TIME":"HORA DE INICIO","END TIME":"HORA DE FIN","PAY RATE":"PAGO POR HORA",
+            "LOCATION (or use profile)":"UBICACIÓN (o usa el perfil)","Use my current location":"Usar mi ubicación actual",
+            "NOTES / REASON (visible to workers)":"NOTAS / MOTIVO (visible para trabajadores)",
+            "PAY $6.25 & PUBLISH SHIFT":"PAGAR $6.25 Y PUBLICAR TURNO",
+            "Secure Stripe checkout — $6.25 per posting. Your shift goes live the moment payment succeeds.":"Pago seguro con Stripe — $6.25 por publicación. Tu turno se publica en cuanto se completa el pago.",
+            "Your Posted Shifts":"Tus turnos publicados",
+            // auth
+            "Welcome back":"Bienvenido de nuevo","Create your CISTYR account":"Crea tu cuenta CISTYR",
+            "Sign in to post or rescue shifts.":"Inicia sesión para publicar o cubrir turnos.",
+            "I AM A…":"SOY…","Worker (job seeker)":"Trabajador (busca empleo)","Business (employer)":"Negocio (empleador)",
+            "PROFILE NAME (SHOWN PUBLICLY)":"NOMBRE DE PERFIL (PÚBLICO)","EMAIL":"CORREO","PASSWORD":"CONTRASEÑA",
+            "Create account":"Crear cuenta","Already have an account?":"¿Ya tienes una cuenta?",
+            "New to CISTYR?":"¿Nuevo en CISTYR?","Create an account":"Crear una cuenta",
+            // worker modal
+            "Visible to businesses when you rescue shifts":"Visible para los negocios cuando cubres turnos",
+            "PROFILE NAME (shown publicly — not your real name)":"NOMBRE DE PERFIL (público — no tu nombre real)",
+            "PHONE":"TELÉFONO","CATEGORIES YOU CAN WORK":"CATEGORÍAS QUE PUEDES TRABAJAR",
+            "RESUME / CERTIFICATIONS":"CURRÍCULUM / CERTIFICACIONES","Upload PDF or DOC":"Subir PDF o DOC",
+            "QUICK AVAILABILITY NOTE":"NOTA RÁPIDA DE DISPONIBILIDAD","SAVE PROFILE":"GUARDAR PERFIL","Cancel":"Cancelar",
+            // business modal
+            "Business Profile":"Perfil de negocio","Used when posting shifts":"Se usa al publicar turnos",
+            "BUSINESS / LOCATION NAME":"NOMBRE DEL NEGOCIO / LOCAL","FULL ADDRESS":"DIRECCIÓN COMPLETA",
+            "SAVE BUSINESS PROFILE":"GUARDAR PERFIL DE NEGOCIO",
+            // rating / reviews
+            "Rate the Rescuer":"Califica al rescatista",
+            "Your feedback helps build trust in the CISTYR community. This is voluntary and anonymous to other workers.":"Tu opinión ayuda a generar confianza en la comunidad CISTYR. Es voluntaria y anónima para otros trabajadores.",
+            "SUBMIT RATING":"ENVIAR CALIFICACIÓN","Skip for now":"Omitir por ahora",
+            "Only the business and platform see individual ratings. Workers see aggregate stats.":"Solo el negocio y la plataforma ven las calificaciones individuales. Los trabajadores ven estadísticas agregadas.",
+            "1. Did they show up on time?":"1. ¿Llegó a tiempo?","2. Did they perform to your satisfaction?":"2. ¿Su desempeño fue satisfactorio?",
+            "3. Would you hire them again?":"3. ¿Lo contratarías de nuevo?","Yes":"Sí","No":"No",
+            "Your Reviews":"Tus reseñas",
+            "These reviews were left voluntarily by businesses after you completed shifts. They help build your reputation on CISTYR.":"Estas reseñas fueron dejadas voluntariamente por negocios después de que completaste turnos. Ayudan a construir tu reputación en CISTYR.",
+            "Showed up on time":"Llegó a tiempo","Performed to satisfaction":"Desempeño satisfactorio","Would hire again":"Contrataría de nuevo",
+            "No reviews yet.":"Aún no hay reseñas.","Complete more shifts to start receiving feedback.":"Completa más turnos para recibir comentarios.",
+            // footer
+            "© CISTYR 2026 • cistyr.org • Direct matching platform (not a staffing agency)":"© CISTYR 2026 • cistyr.org • Plataforma de emparejamiento directo (no es una agencia de empleo)",
+            "CA-focused • Built for compliance & speed":"Enfocado en CA • Hecho para cumplimiento y rapidez",
+            // dynamic card labels
+            "RED LIGHT — NEEDS RESCUE":"LUZ ROJA — NECESITA RESCATE","GREEN LIGHT — RESCUED":"LUZ VERDE — RESCATADO",
+            "by":"por","SHIFT":"TURNO","PAY":"PAGO","TO YOUR RESCUE":"A TU RESCATE","COVERED":"CUBIERTO","YOU'RE ON IT!":"¡VAS EN CAMINO!",
+            "GREEN — COVERED":"VERDE — CUBIERTO","RED — OPEN":"ROJO — ABIERTO","Rescued by:":"Rescatado por:",
+            "Mark Completed":"Marcar completado","Cancel Post":"Cancelar publicación","No shifts posted yet":"Aún no has publicado turnos",
+            "Use the form above to create your first \"Called in Sick\" post.":"Usa el formulario de arriba para crear tu primera publicación \"por enfermedad\".",
+            "Set your business profile to see your posted shifts here.":"Configura el perfil de tu negocio para ver aquí tus turnos publicados.",
+            "No profile yet":"Aún no tienes perfil","Create Profile":"Crear perfil","No resume uploaded":"No hay currículum subido",
+            "On Time":"A tiempo","Performed Well":"Buen desempeño","Would Rehire":"Recontrataría","View Details →":"Ver detalles →",
+            "Availability:":"Disponibilidad:","Create Business Profile":"Crear perfil de negocio",
+            "Worker Mode":"Modo trabajador","— To the Rescue":"— Al rescate","Business Mode":"Modo negocio","— Need Rescue":"— Necesita rescate",
+            "Browse shifts and tap \"To Your Rescue\" when you can cover":"Explora turnos y toca \"A tu rescate\" cuando puedas cubrir",
+            "Post shifts instantly. Watch for the green light.":"Publica turnos al instante. Espera la luz verde.",
+            "open":"abiertos","mi away":"mi de distancia",
+            // toasts
+            "Redirecting to secure checkout ($6.25)…":"Redirigiendo al pago seguro ($6.25)…",
+            "Please tag the shift location — tap \"Use my current location\" below.":"Etiqueta la ubicación del turno — toca \"Usar mi ubicación actual\" abajo.",
+            "Only business accounts can post shifts.":"Solo las cuentas de negocio pueden publicar turnos.",
+            "Please set up your business profile first":"Primero configura el perfil de tu negocio",
+            "Could not start checkout.":"No se pudo iniciar el pago.",
+            "Only worker accounts can rescue shifts.":"Solo las cuentas de trabajador pueden cubrir turnos.",
+            "Please complete your worker profile first so businesses can contact you.":"Primero completa tu perfil de trabajador para que los negocios puedan contactarte.",
+            "This shift has already been rescued.":"Este turno ya fue cubierto.",
+            "Sorry — someone just grabbed this one. Refreshing…":"Lo sentimos — alguien acaba de tomarlo. Actualizando…",
+            "Shift marked complete.":"Turno marcado como completado.","Shift cancelled.":"Turno cancelado.",
+            "Thank you! Rating submitted. Shift marked complete.":"¡Gracias! Calificación enviada. Turno completado.",
+            "Shift marked complete (no rating given).":"Turno completado (sin calificación).",
+            "Profile saved! You're ready to rescue shifts.":"¡Perfil guardado! Ya puedes cubrir turnos.",
+            "Business profile saved. You can now post shifts.":"Perfil de negocio guardado. Ya puedes publicar turnos.",
+            "Confirming your payment…":"Confirmando tu pago…",
+            "Payment received — your shift is now live on the board!":"¡Pago recibido — tu turno ya está publicado!",
+            "Payment not confirmed yet. If you were charged, your shift will appear shortly.":"El pago aún no se confirma. Si se te cobró, tu turno aparecerá pronto.",
+            "Could not confirm payment right now.":"No se pudo confirmar el pago ahora.",
+            "Checkout canceled — your shift was not posted.":"Pago cancelado — tu turno no se publicó.",
+            "Finding shifts near you…":"Buscando turnos cerca de ti…","Sorted by distance from you.":"Ordenado por distancia desde tu ubicación.",
+            "Geolocation is not supported on this device.":"La geolocalización no es compatible con este dispositivo.",
+            "Account created! Check your email to confirm, then sign in.":"¡Cuenta creada! Revisa tu correo para confirmar y luego inicia sesión.",
+            "Enter your email and password.":"Ingresa tu correo y contraseña.","Please enter your name.":"Por favor ingresa tu nombre.",
+            // confirms / alerts
+            "Mark this shift as completed? It will be removed from active listings.":"¿Marcar este turno como completado? Se quitará de los listados activos.",
+            "Cancel this posted shift? Workers will no longer see it.":"¿Cancelar este turno publicado? Los trabajadores ya no lo verán.",
+            "Please enter at least your name.":"Por favor ingresa al menos tu nombre.","Business name is required.":"El nombre del negocio es obligatorio.",
+            // placeholders
+            "Your password":"Tu contraseña","e.g. RescuerRex":"ej. RescuerRex",
+            "e.g. RescuerRex or Reliable_Alex":"ej. RescuerRex o AlexConfiable",
+            "Usually available same-day after 11am in Sacramento area":"Normalmente disponible el mismo día después de las 11am en el área de Sacramento",
+            "Downtown Sacramento, CA":"Centro de Sacramento, CA",
+            "Server called in sick for dinner rush. Need reliable closer with food handler card.":"Mesero se reportó enfermo para la cena. Se necesita cierre confiable con tarjeta de manejo de alimentos."
+        };
+        function t(s){ if(currentLang!=='es' || s==null) return s; const k=String(s).trim(); return (I18N_ES[k]!=null) ? I18N_ES[k] : s; }
+        function _tNode(node){
+            const p=node.parentNode; if(p && (p.nodeName==='SCRIPT'||p.nodeName==='STYLE')) return;
+            const raw=node.nodeValue; if(!raw) return; const key=raw.trim(); if(!key) return;
+            const tr=I18N_ES[key]; if(tr!=null){ if(!_i18nOrig.has(node)) _i18nOrig.set(node, raw); node.nodeValue = raw.replace(key, tr); }
+        }
+        function translateTree(root){
+            if(!root) return;
+            if(root.nodeType===3){ if(currentLang==='es') _tNode(root); return; }
+            if(root.nodeType!==1) return;
+            if(currentLang==='es'){
+                const w=document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null); const ns=[]; let n;
+                while(n=w.nextNode()) ns.push(n); ns.forEach(_tNode);
+                (root.querySelectorAll?root.querySelectorAll('[placeholder]'):[]).forEach(el=>{
+                    const raw=el.getAttribute('placeholder'); if(!raw) return; const key=raw.trim();
+                    if(I18N_ES[key]!=null){ if(!el.dataset.i18nPh) el.dataset.i18nPh=raw; el.setAttribute('placeholder', I18N_ES[key]); }
+                });
+            }
+        }
+        function restoreAll(){
+            const w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null); const ns=[]; let n;
+            while(n=w.nextNode()) ns.push(n);
+            ns.forEach(node=>{ if(_i18nOrig.has(node)) node.nodeValue=_i18nOrig.get(node); });
+            document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ el.setAttribute('placeholder', el.dataset.i18nPh); el.removeAttribute('data-i18n-ph'); });
+        }
+        function applyLang(lang){
+            currentLang = (lang==='es') ? 'es' : 'en';
+            try{ localStorage.setItem('cistyr_lang', currentLang); }catch(_){}
+            document.documentElement.lang = currentLang;
+            if(currentLang==='es') translateTree(document.body); else restoreAll();
+            const enB=document.getElementById('lang-en'), esB=document.getElementById('lang-es');
+            if(enB&&esB){ const on='bg-emerald-600 text-white', off='text-slate-600';
+                enB.className='px-2.5 py-1 rounded-2xl text-xs font-bold transition-colors '+(currentLang==='en'?on:off);
+                esB.className='px-2.5 py-1 rounded-2xl text-xs font-bold transition-colors '+(currentLang==='es'?on:off); }
+        }
+        function setLang(lang){ applyLang(lang); if(currentUser) switchMode(currentMode); if(currentLang==='es') translateTree(document.body); }
+        const _i18nObs = new MutationObserver(muts=>{ if(currentLang!=='es') return;
+            for(const m of muts){ if(m.addedNodes) m.addedNodes.forEach(nd=>{ try{ translateTree(nd); }catch(_){} }); } });
+        try{ _i18nObs.observe(document.documentElement, { childList:true, subtree:true }); }catch(_){}
+
         // ===== Data loading =====
         let contactsById = {};
         function collectCounterpartyIds(){
@@ -1102,7 +1287,7 @@
             }
             
             const openCount = posts.filter(p => p.status === 'open').length;
-            document.getElementById('open-count-badge').innerHTML = `${openCount} open`;
+            document.getElementById('open-count-badge').innerHTML = `${openCount} ${t('open')}`;
             document.getElementById('open-count-badge').className = openCount > 0 
                 ? 'text-xs font-mono bg-red-100 text-red-600 px-2.5 py-0.5 rounded-full' 
                 : 'text-xs font-mono bg-emerald-100 text-emerald-600 px-2.5 py-0.5 rounded-full';
@@ -1134,7 +1319,7 @@
                                       post.category === 'Retail' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700';
                 const bizContact = (currentUser && post.rescuerId===currentUser.id && contactsById[post.businessId]) ? contactsById[post.businessId] : null;
                 const distMi = (workerLat!=null && post.lat!=null && post.lng!=null) ? haversineMiles(workerLat,workerLng,post.lat,post.lng) : null;
-                const distStr = (distMi!=null) ? ` <span class="text-emerald-600 font-semibold whitespace-nowrap">• ${distMi.toFixed(distMi<10?1:0)} mi away</span>` : '';
+                const distStr = (distMi!=null) ? ` <span class="text-emerald-600 font-semibold whitespace-nowrap">• ${distMi.toFixed(distMi<10?1:0)} ${t('mi away')}</span>` : '';
                 
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
@@ -1194,15 +1379,22 @@
         
         function filterShifts() {
             const category = document.getElementById('category-filter').value;
+            const radiusEl = document.getElementById('distance-filter');
+            const radius = radiusEl ? parseFloat(radiusEl.value) : NaN;
             let filtered = posts;
-            
-            if (category) {
-                filtered = posts.filter(p => p.category === category);
+            if (category) filtered = filtered.filter(p => p.category === category);
+            if (!isNaN(radius) && workerLat != null) {
+                filtered = filtered.filter(p => p.lat != null && p.lng != null && haversineMiles(workerLat, workerLng, p.lat, p.lng) <= radius);
             }
-            
             renderShifts(filtered);
         }
-        
+        function onDistanceFilterChange() {
+            const radiusEl = document.getElementById('distance-filter');
+            const radius = radiusEl ? parseFloat(radiusEl.value) : NaN;
+            if (!isNaN(radius) && workerLat == null) { useNearMe(); return; }
+            filterShifts();
+        }
+
         // Switch between Worker and Business mode
         function switchMode(mode) {
             currentMode = mode;
@@ -1260,6 +1452,12 @@
             const notes = document.getElementById('post-notes').value.trim();
             if (!location) location = businessProfile.address || "Sacramento Metro Area";
             const timeStr = `${when} • ${start} – ${end}`;
+            if (postLat == null || postLng == null) {
+                showToast('Please tag the shift location — tap "Use my current location" below.', 'error');
+                const lb = document.querySelector('button[onclick="capturePostLocation()"]');
+                if (lb) { lb.classList.add('ring-2','ring-red-400','text-red-600'); lb.scrollIntoView({behavior:'smooth',block:'center'}); }
+                return;
+            }
             const btn = e.target.querySelector('button[type="submit"]');
             if(btn){ btn.disabled = true; }
             showToast("Redirecting to secure checkout ($6.25)…", "success");
@@ -1399,7 +1597,7 @@
             if (post.rescuer && post.status === 'rescued') {
                 showRescuerRatingModal(postId);
             } else {
-                if (!confirm("Mark this shift as completed? It will be removed from active listings.")) return;
+                if (!confirm(t("Mark this shift as completed? It will be removed from active listings."))) return;
                 const { error } = await sb.from('cistyr_shifts').update({ status:'completed' }).eq('id', postId);
                 if(error){ showToast('Could not update: '+error.message,'error'); return; }
                 posts = posts.filter(p => p.id !== postId);
@@ -1409,7 +1607,7 @@
         }
 
         async function cancelShift(postId, btn) {
-            if (!confirm("Cancel this posted shift? Workers will no longer see it.")) return;
+            if (!confirm(t("Cancel this posted shift? Workers will no longer see it."))) return;
             const { error } = await sb.from('cistyr_shifts').update({ status:'cancelled' }).eq('id', postId);
             if(error){ showToast('Could not cancel: '+error.message,'error'); return; }
             posts = posts.filter(p => p.id !== postId);
@@ -1678,7 +1876,7 @@
             workerProfile.availability = document.getElementById('worker-availability').value.trim();
             const checkedBoxes = document.querySelectorAll('#worker-categories input[type="checkbox"]:checked');
             workerProfile.categories = Array.from(checkedBoxes).map(cb => cb.value);
-            if (!workerProfile.name) { alert("Please enter at least your name."); return; }
+            if (!workerProfile.name) { alert(t("Please enter at least your name.")); return; }
             const { error } = await sb.from('cistyr_profiles').update({
                 display_name: workerProfile.name, categories: workerProfile.categories
             }).eq('id', currentUser.id);
@@ -1711,7 +1909,7 @@
             businessProfile.phone = document.getElementById('business-phone').value.trim();
             businessProfile.email = document.getElementById('business-email').value.trim();
             businessProfile.address = document.getElementById('business-address').value.trim();
-            if (!businessProfile.name) { alert("Business name is required."); return; }
+            if (!businessProfile.name) { alert(t("Business name is required.")); return; }
             const { error } = await sb.from('cistyr_profiles').update({
                 business_name: businessProfile.name
             }).eq('id', currentUser.id);
@@ -1728,6 +1926,7 @@
 
         // Toast notifications
         function showToast(message, type = "success") {
+            message = t(message);
             const container = document.getElementById('toast-container');
             
             const toast = document.createElement('div');
@@ -1776,6 +1975,7 @@
             sb.auth.onAuthStateChange((_event, s) => { applySession(s); });
             const { data:{ session } } = await sb.auth.getSession();
             await applySession(session);
+            try{ const sl=localStorage.getItem('cistyr_lang'); if(sl==='es') applyLang('es'); }catch(_){}
         }
         window.onload = cistyrBoot;
     </script>
