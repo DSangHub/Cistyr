@@ -334,6 +334,12 @@
                                 <i class="fa-solid fa-filter"></i>
                                 <span class="hidden sm:inline">Filter</span>
                             </button>
+
+                            <button id="near-me-btn" onclick="useNearMe()"
+                                    class="px-4 py-2 text-xs border border-slate-300 hover:bg-slate-100 rounded-2xl transition-colors flex items-center gap-x-1.5">
+                                <i class="fa-solid fa-location-dot"></i>
+                                <span class="hidden sm:inline">Near me</span>
+                            </button>
                         </div>
                     </div>
                     
@@ -422,6 +428,11 @@
                                 <label class="text-xs font-semibold text-slate-500 tracking-wider block mb-1.5">LOCATION (or use profile)</label>
                                 <input type="text" id="post-location" placeholder="Downtown Sacramento, CA" 
                                        class="w-full border border-slate-300 focus:border-red-400 rounded-2xl px-4 py-3 text-sm">
+                                <button type="button" onclick="capturePostLocation()"
+                                        class="mt-2 text-xs px-3 py-2 border border-slate-300 hover:bg-slate-50 rounded-2xl inline-flex items-center gap-x-1.5 text-slate-600">
+                                    <i class="fa-solid fa-location-crosshairs"></i> Use my current location
+                                </button>
+                                <div id="post-loc-status" class="text-[11px] text-slate-400 mt-1"></div>
                             </div>
                             
                             <div class="md:col-span-2">
@@ -711,6 +722,9 @@
         let myRole = null;
         let authMode = 'signin';
         let loadedUserId = null;
+        let postLat = null, postLng = null;
+        let workerLat = null, workerLng = null;
+        let sortByDistance = false;
 
         const CATEGORIES = ["Fast Food", "Retail", "Medical Non-Essential"];
 
@@ -738,8 +752,40 @@
                 description: r.notes || '',
                 status: r.status,
                 rescuer: (r.rescuer && r.rescuer.display_name) || null,
-                postedAt: relTime(r.created_at)
+                postedAt: relTime(r.created_at),
+                lat: (r.latitude!=null)? Number(r.latitude): null,
+                lng: (r.longitude!=null)? Number(r.longitude): null
             };
+        }
+
+        // ===== Geolocation =====
+        function haversineMiles(lat1,lng1,lat2,lng2){
+            const R=3958.8, toRad=d=>d*Math.PI/180;
+            const dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
+            const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+            return 2*R*Math.asin(Math.min(1,Math.sqrt(a)));
+        }
+        function capturePostLocation(){
+            const status=document.getElementById('post-loc-status');
+            if(!navigator.geolocation){ if(status) status.textContent='Geolocation not supported.'; return; }
+            if(status) status.textContent='Locating…';
+            navigator.geolocation.getCurrentPosition(
+                pos=>{ postLat=pos.coords.latitude; postLng=pos.coords.longitude;
+                       if(status) status.innerHTML='<span class="text-emerald-600 font-semibold"><i class="fa-solid fa-location-crosshairs mr-1"></i>Location tagged for this shift</span>'; },
+                err=>{ if(status) status.textContent='Could not get location ('+err.message+').'; },
+                { enableHighAccuracy:true, timeout:10000 }
+            );
+        }
+        function useNearMe(){
+            if(!navigator.geolocation){ showToast('Geolocation is not supported on this device.','error'); return; }
+            showToast('Finding shifts near you…','success');
+            navigator.geolocation.getCurrentPosition(
+                pos=>{ workerLat=pos.coords.latitude; workerLng=pos.coords.longitude; sortByDistance=true;
+                       const btn=document.getElementById('near-me-btn'); if(btn){ btn.classList.add('bg-emerald-600','text-white','border-emerald-600'); btn.classList.remove('border-slate-300'); }
+                       filterShifts(); showToast('Sorted by distance from you.','success'); },
+                err=>{ showToast('Could not get your location: '+err.message,'error'); },
+                { enableHighAccuracy:true, timeout:10000 }
+            );
         }
 
         // ===== Data loading =====
@@ -1041,6 +1087,14 @@
             
             // In worker mode, show open + rescued (but rescued can be seen)
             toShow = toShow.filter(p => true); // all for now
+
+            if (sortByDistance && workerLat != null) {
+                toShow = toShow.slice().sort((a,b)=>{
+                    const da=(a.lat!=null)?haversineMiles(workerLat,workerLng,a.lat,a.lng):Infinity;
+                    const db=(b.lat!=null)?haversineMiles(workerLat,workerLng,b.lat,b.lng):Infinity;
+                    return da-db;
+                });
+            }
             
             if (toShow.length === 0) {
                 grid.innerHTML = `<div class="col-span-full text-center py-8 text-slate-400">No shifts match your filters right now.</div>`;
@@ -1079,6 +1133,8 @@
                 const categoryColor = post.category === 'Fast Food' ? 'bg-orange-100 text-orange-700' : 
                                       post.category === 'Retail' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700';
                 const bizContact = (currentUser && post.rescuerId===currentUser.id && contactsById[post.businessId]) ? contactsById[post.businessId] : null;
+                const distMi = (workerLat!=null && post.lat!=null && post.lng!=null) ? haversineMiles(workerLat,workerLng,post.lat,post.lng) : null;
+                const distStr = (distMi!=null) ? ` <span class="text-emerald-600 font-semibold whitespace-nowrap">• ${distMi.toFixed(distMi<10?1:0)} mi away</span>` : '';
                 
                 card.innerHTML = `
                     <div class="flex justify-between items-start">
@@ -1094,7 +1150,7 @@
                         <div class="font-bold text-xl leading-tight">${post.businessName}</div>
                         <div class="text-xs text-slate-500 flex items-center gap-x-1 mt-0.5">
                             <i class="fa-solid fa-map-marker-alt fa-xs"></i> 
-                            <span>${post.location}</span>
+                            <span>${post.location}${distStr}</span>
                         </div>
                     </div>
                     
@@ -1210,6 +1266,7 @@
             const { data, error } = await sb.functions.invoke('cistyr-checkout', { body: {
                 category, when_label: when, start_time: start, end_time: end,
                 time_label: timeStr, pay_rate: parseFloat(pay)||0,
+                latitude: postLat, longitude: postLng,
                 location, notes: notes || "Last-minute coverage needed. Reliable help appreciated."
             }});
             if(error || !data || !data.url){
