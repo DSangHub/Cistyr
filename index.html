@@ -470,10 +470,10 @@
                         <button type="submit" 
                                 class="mt-6 w-full bg-red-600 hover:bg-red-700 active:bg-red-800 transition-colors text-white font-bold py-4 rounded-3xl flex items-center justify-center gap-x-3 text-base shadow-inner">
                             <i class="fa-solid fa-paper-plane"></i>
-                            <span>PAY $6.25 &amp; PUBLISH SHIFT</span>
+                            <span id="post-submit-label">PAY $6.25 &amp; PUBLISH SHIFT</span>
                         </button>
                         
-                        <p class="text-center text-[10px] text-red-400 mt-3">Secure Stripe checkout — $6.25 per posting. Your shift goes live the moment payment succeeds.</p>
+                        <p id="post-price-note" class="text-center text-[10px] text-red-400 mt-3">First post free. Additional posts are $6.25 through secure Stripe checkout.</p>
                     </form>
                 </div>
                 
@@ -741,6 +741,7 @@
         let workerProfile = {};
         let resumeRecord = null;
         let businessVerified = false;
+        let firstPostFree = false;
         let businessProfile = {};
         let ratings = [];
         let currentMode = 'worker';
@@ -1030,6 +1031,7 @@
             const { data: shifts } = await sb.from('cistyr_shifts').select(SHIFT_SELECT).in('status',['open','rescued']).order('created_at',{ascending:false});
             posts = (shifts||[]).map(mapShift);
             await loadContacts();
+            if (myRole === 'business') await refreshPostPrice();
             if(myRole==='worker'){
                 const { data: rt } = await sb.from('cistyr_ratings').select('*, business:cistyr_profiles!cistyr_ratings_business_id_fkey(business_name)').eq('worker_id', currentUser.id).order('created_at',{ascending:false});
                 ratings = (rt||[]).map(r=>({
@@ -1450,7 +1452,20 @@
             }
         }
         
-        // Post new shift (business) — requires a $6.25 payment via Stripe
+        async function refreshPostPrice() {
+            if (!currentUser || myRole !== 'business') return;
+            const [claims, shifts] = await Promise.all([
+                sb.from('cistyr_free_post_claims').select('business_id').eq('business_id', currentUser.id).limit(1),
+                sb.from('cistyr_shifts').select('id').eq('business_id', currentUser.id).limit(1)
+            ]);
+            firstPostFree = !claims.error && !shifts.error && !(claims.data?.length) && !(shifts.data?.length);
+            document.getElementById('post-submit-label').textContent = firstPostFree ? 'PUBLISH FIRST SHIFT FREE' : 'PAY $6.25 & PUBLISH SHIFT';
+            document.getElementById('post-price-note').textContent = firstPostFree
+                ? 'Your first shift post is free. Additional posts cost $6.25 each.'
+                : 'Secure Stripe checkout — $6.25 per additional post. Your shift goes live after payment.';
+        }
+
+        // First shift free; subsequent posts require a $6.25 Stripe checkout.
         async function postNewShift(e) {
             e.preventDefault();
             if(!requireAuth()) return;
@@ -1477,13 +1492,21 @@
             }
             const btn = e.target.querySelector('button[type="submit"]');
             if(btn){ btn.disabled = true; }
-            showToast("Redirecting to secure checkout ($6.25)…", "success");
             const { data, error } = await sb.functions.invoke('cistyr-checkout', { body: {
                 category, when_label: when, start_time: start, end_time: end,
                 time_label: timeStr, pay_rate: parseFloat(pay)||0,
                 latitude: postLat, longitude: postLng,
                 location, notes: notes || "Last-minute coverage needed. Reliable help appreciated."
             }});
+            if (data?.free && !error) {
+                if (btn) btn.disabled = false;
+                firstPostFree = false;
+                await refreshPostPrice();
+                await refreshBoard();
+                e.target.reset();
+                showToast('Your first shift is posted free!', 'success');
+                return;
+            }
             if(error || !data || !data.url){
                 if(btn){ btn.disabled = false; }
                 let msg = 'Could not start checkout.';
