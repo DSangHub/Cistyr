@@ -17,6 +17,19 @@
         
         body {
             font-family: 'Inter', system_ui, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Reflow controls and keep dialogs accessible after device rotation. */
+        @media (max-width: 767px) {
+            nav .max-w-screen-xl > div { flex-wrap: wrap; gap: 0.75rem; padding: 0.75rem 1rem; }
+            nav .max-w-screen-xl > div > div:last-child { flex-wrap: wrap; gap: 0.25rem; }
+            h1.text-6xl { font-size: clamp(2.5rem, 10vw, 3.75rem); overflow-wrap: anywhere; }
+            #main-app > .flex, #worker-panel .lg\:col-span-8 > .flex,
+            #business-panel .lg\:col-span-8 > .flex { flex-wrap: wrap; gap: 0.75rem; }
+            #worker-panel .lg\:col-span-8 > .flex > .flex { flex-wrap: wrap; }
+            .fixed.inset-0 { overflow-y: auto; align-items: safe center; }
+            .fixed.inset-0 > .modal { max-height: calc(100dvh - 2rem); overflow-y: auto; }
         }
         
         .logo-font {
@@ -310,6 +323,7 @@
                             <i class="fa-solid fa-file-alt"></i>
                             <span id="resume-status">No resume uploaded yet</span>
                         </div>
+                        <p class="mt-2">Private. Only verified businesses you rescue a shift for can view your resume.</p>
                     </div>
                 </div>
 
@@ -725,6 +739,8 @@
         // ===== App state =====
         let posts = [];
         let workerProfile = {};
+        let resumeRecord = null;
+        let businessVerified = false;
         let businessProfile = {};
         let ratings = [];
         let currentMode = 'worker';
@@ -1000,8 +1016,12 @@
             myProfile = prof; myRole = prof ? prof.role : 'worker';
             const { data: contact } = await sb.from('cistyr_contacts').select('*').eq('id', currentUser.id).maybeSingle();
             const ct = contact || {};
+            const { data: verification } = await sb.from('cistyr_verified_businesses').select('business_id').eq('business_id', currentUser.id).maybeSingle();
+            businessVerified = myRole === 'business' && !!verification;
             if(myRole==='worker'){
-                workerProfile = { name: prof.display_name||'', phone: ct.phone||'', email: ct.email||'', availability: ct.availability||'', categories: prof.categories||[], resumeFileName: ct.resume_filename||'' };
+                const { data: resume } = await sb.from('cistyr_resumes').select('file_name, object_path').eq('worker_id', currentUser.id).maybeSingle();
+                resumeRecord = resume || null;
+                workerProfile = { name: prof.display_name||'', phone: ct.phone||'', email: ct.email||'', availability: ct.availability||'', categories: prof.categories||[], resumeFileName: resume?.file_name||'' };
                 businessProfile = {};
             } else {
                 businessProfile = { name: prof.business_name||'', phone: ct.phone||'', email: ct.email||'', address: ct.address||'' };
@@ -1519,6 +1539,7 @@
                     rescuerInfo = `<div class="mt-3 text-xs bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2 text-emerald-700">
                         <span class="font-semibold">Rescued by:</span> ${post.rescuer}<br>
                         <span class="text-[10px]">${rcLine}</span>
+                        ${businessVerified ? `<button type="button" onclick="viewWorkerResume('${post.rescuerId}')" class="block mt-2 underline font-semibold">View private resume</button>` : '<span class="block mt-2">Business verification required to view resumes.</span>'}
                     </div>`;
                 }
                 
@@ -1804,15 +1825,36 @@
             };
         }
         
-        // Handle resume file (stores filename only)
+        async function viewWorkerResume(workerId) {
+            if (!businessVerified || myRole !== 'business' || !posts.some(p => p.businessId === currentUser?.id && p.rescuerId === workerId)) return;
+            const { data: resume, error } = await sb.from('cistyr_resumes').select('object_path').eq('worker_id', workerId).maybeSingle();
+            if (error || !resume) { showToast('No resume available for this worker.', 'error'); return; }
+            const { data, error: downloadError } = await sb.storage.from('cistyr-resumes').download(resume.object_path);
+            if (downloadError) { showToast('Resume access denied.', 'error'); return; }
+            const url = URL.createObjectURL(data);
+            const link = document.createElement('a'); link.href = url; link.download = 'worker-resume'; link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+        }
+
+        // Upload the file to private Storage before recording its path.
         async function handleResumeUpload(input) {
-            if (input.files.length > 0) {
-                const file = input.files[0];
-                workerProfile.resumeFileName = file.name;
-                const filenameEl = document.getElementById('resume-filename');
-                if (filenameEl) filenameEl.innerHTML = `<span class="text-emerald-600 font-medium">${file.name}</span>`;
-                if(currentUser){ await sb.from('cistyr_contacts').upsert({ id: currentUser.id, resume_filename: file.name }); }
-            }
+            const file = input.files[0];
+            if (!file || !currentUser || myRole !== 'worker') return;
+            const extensions = { 'application/pdf': 'pdf', 'application/msword': 'doc', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx' };
+            const ext = extensions[file.type];
+            if (!ext || file.size > 5 * 1024 * 1024) { showToast('Choose a PDF or Word file under 5 MB.', 'error'); input.value = ''; return; }
+            const path = `${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+            const { error: uploadError } = await sb.storage.from('cistyr-resumes').upload(path, file, { contentType: file.type, upsert: false });
+            if (uploadError) { showToast('Resume upload failed: ' + uploadError.message, 'error'); return; }
+            const { error } = await sb.from('cistyr_resumes').upsert({ worker_id: currentUser.id, object_path: path, file_name: file.name }, { onConflict: 'worker_id' });
+            if (error) { await sb.storage.from('cistyr-resumes').remove([path]); showToast('Could not save resume: ' + error.message, 'error'); return; }
+            const oldPath = resumeRecord?.object_path;
+            resumeRecord = { object_path: path, file_name: file.name };
+            workerProfile.resumeFileName = file.name;
+            document.getElementById('resume-filename').textContent = file.name;
+            renderWorkerProfileSummary();
+            if (oldPath) await sb.storage.from('cistyr-resumes').remove([oldPath]);
+            showToast('Resume saved privately.', 'success');
         }
 
         // Show / hide modals
@@ -1879,7 +1921,7 @@
             }).eq('id', currentUser.id);
             const { error: cerr } = await sb.from('cistyr_contacts').upsert({
                 id: currentUser.id, phone: workerProfile.phone, email: workerProfile.email,
-                availability: workerProfile.availability, resume_filename: workerProfile.resumeFileName || null
+                availability: workerProfile.availability
             });
             if(error || cerr){ showToast('Could not save profile: '+((error||cerr).message),'error'); return; }
             hideWorkerProfileModal();
