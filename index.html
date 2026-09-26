@@ -182,7 +182,7 @@
                             <i class="fa-solid fa-user-check"></i>
                             <span>I'm Ready to Rescue</span>
                         </button>
-                        <button onclick="cistyrStart('business')" 
+                        <button id="post-shift-cta" onclick="cistyrStart('business')"
                                 class="px-8 py-4 bg-white border border-slate-300 hover:bg-slate-50 font-semibold rounded-3xl flex items-center gap-x-3 transition-all text-lg text-slate-700">
                             <i class="fa-solid fa-exclamation-triangle"></i>
                             <span>Post a Called-In-Sick Shift</span>
@@ -236,7 +236,7 @@
                     </div>
                     <div class="flex gap-4">
                         <div class="font-mono w-6 h-6 flex-shrink-0 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                        <div><span class="font-semibold">Tap <span class="font-bold text-red-600">"To Your Rescue"</span></span><br><span class="text-slate-500 text-xs">Instant green light. Business gets notified. You get the shift.</span></div>
+                        <div><span class="font-semibold">Apply to rescue a shift</span><br><span class="text-slate-500 text-xs">The business reviews up to three workers and chooses one.</span></div>
                     </div>
                     <div class="flex gap-4">
                         <div class="font-mono w-6 h-6 flex-shrink-0 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
@@ -267,7 +267,7 @@
                     </div>
                     <div class="flex gap-4">
                         <div class="font-mono w-6 h-6 flex-shrink-0 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
-                        <div><span class="font-semibold">Watch the light turn green</span><br><span class="text-slate-500 text-xs">When a worker taps "To Your Rescue", you get matched instantly.</span></div>
+                        <div><span class="font-semibold">Choose your worker</span><br><span class="text-slate-500 text-xs">Review up to three applicants and choose one for $6.25.</span></div>
                     </div>
                     <div class="flex gap-4">
                         <div class="font-mono w-6 h-6 flex-shrink-0 bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold">4</div>
@@ -470,10 +470,10 @@
                         <button type="submit" 
                                 class="mt-6 w-full bg-red-600 hover:bg-red-700 active:bg-red-800 transition-colors text-white font-bold py-4 rounded-3xl flex items-center justify-center gap-x-3 text-base shadow-inner">
                             <i class="fa-solid fa-paper-plane"></i>
-                            <span id="post-submit-label">PAY $6.25 &amp; PUBLISH SHIFT</span>
+                            <span id="post-submit-label">PUBLISH SHIFT FREE</span>
                         </button>
                         
-                        <p id="post-price-note" class="text-center text-[10px] text-red-400 mt-3">First post free. Additional posts are $6.25 through secure Stripe checkout.</p>
+                        <p id="post-price-note" class="text-center text-[10px] text-red-400 mt-3">Posting is free. Review up to 3 interested workers, then pay $6.25 to choose one.</p>
                     </form>
                 </div>
                 
@@ -741,7 +741,9 @@
         let workerProfile = {};
         let resumeRecord = null;
         let businessVerified = false;
-        let firstPostFree = false;
+        let applications = [];
+        let applicantProfiles = {};
+        let selections = [];
         let businessProfile = {};
         let ratings = [];
         let currentMode = 'worker';
@@ -836,8 +838,8 @@
             "Takes 60 seconds. Add your categories & availability.":"Toma 60 segundos. Agrega tus categorías y disponibilidad.",
             "Browse \"Called in Sick\" posts":"Explora las publicaciones \"por enfermedad\"",
             "Filter by category, time, and location near you.":"Filtra por categoría, hora y ubicación cerca de ti.",
-            "Tap":"Toca","\"To Your Rescue\"":"\"A tu rescate\"",
-            "Instant green light. Business gets notified. You get the shift.":"Luz verde al instante. El negocio recibe aviso. Tú obtienes el turno.",
+            "Apply to rescue a shift":"Solicita cubrir un turno",
+            "The business reviews up to three workers and chooses one.":"El negocio revisa hasta tres trabajadores y elige a uno.",
             "Show up & get paid":"Preséntate y cobra",
             "Direct with the business. Keep 100% of your earnings.":"Directo con el negocio. Quédate con el 100% de tus ingresos.",
             "For Businesses":"Para negocios","Fill gaps in minutes":"Cubre vacantes en minutos",
@@ -845,8 +847,8 @@
             "Name, location, contact. One-time setup.":"Nombre, ubicación, contacto. Configuración única.",
             "Post a \"Called in Sick\" shift":"Publica un turno \"por enfermedad\"",
             "Choose category • time • pay. Goes live instantly.":"Elige categoría • hora • pago. Se publica al instante.",
-            "Watch the light turn green":"Observa cómo la luz se pone verde",
-            "When a worker taps \"To Your Rescue\", you get matched instantly.":"Cuando un trabajador toca \"A tu rescate\", se emparejan al instante.",
+            "Choose your worker":"Elige a tu trabajador",
+            "Review up to three applicants and choose one for $6.25.":"Revisa hasta tres candidatos y elige a uno por $6.25.",
             "Confirm & operate":"Confirma y opera",
             "Direct coordination. No platform fees on the shift itself.":"Coordinación directa. Sin comisiones de plataforma sobre el turno.",
             "CISTYR is a direct matching platform. Businesses and workers handle all payments, scheduling, and compliance directly. Always verify qualifications and follow CA labor laws.":"CISTYR es una plataforma de emparejamiento directo. Los negocios y trabajadores gestionan pagos, horarios y cumplimiento directamente. Verifica siempre las cualificaciones y cumple las leyes laborales de California.",
@@ -864,8 +866,8 @@
             "START TIME":"HORA DE INICIO","END TIME":"HORA DE FIN","PAY RATE":"PAGO POR HORA",
             "LOCATION (or use profile)":"UBICACIÓN (o usa el perfil)","Use my current location":"Usar mi ubicación actual",
             "NOTES / REASON (visible to workers)":"NOTAS / MOTIVO (visible para trabajadores)",
-            "PAY $6.25 & PUBLISH SHIFT":"PAGAR $6.25 Y PUBLICAR TURNO",
-            "Secure Stripe checkout — $6.25 per posting. Your shift goes live the moment payment succeeds.":"Pago seguro con Stripe — $6.25 por publicación. Tu turno se publica en cuanto se completa el pago.",
+            "PUBLISH SHIFT FREE":"PUBLICAR TURNO GRATIS",
+            "Posting is free. Review up to 3 interested workers, then pay $6.25 to choose one.":"Publicar es gratis. Revisa hasta 3 trabajadores interesados y paga $6.25 para elegir uno.",
             "Your Posted Shifts":"Tus turnos publicados",
             // auth
             "Welcome back":"Bienvenido de nuevo","Create your CISTYR account":"Crea tu cuenta CISTYR",
@@ -900,7 +902,7 @@
             "CA-focused • Built for compliance & speed":"Enfocado en CA • Hecho para cumplimiento y rapidez",
             // dynamic card labels
             "RED LIGHT — NEEDS RESCUE":"LUZ ROJA — NECESITA RESCATE","GREEN LIGHT — RESCUED":"LUZ VERDE — RESCATADO",
-            "by":"por","SHIFT":"TURNO","PAY":"PAGO","TO YOUR RESCUE":"A TU RESCATE","COVERED":"CUBIERTO","YOU'RE ON IT!":"¡VAS EN CAMINO!",
+            "by":"por","SHIFT":"TURNO","PAY":"PAGO","APPLY TO RESCUE":"SOLICITAR TURNO","COVERED":"CUBIERTO","APPLICATION SENT":"SOLICITUD ENVIADA",
             "GREEN — COVERED":"VERDE — CUBIERTO","RED — OPEN":"ROJO — ABIERTO","Rescued by:":"Rescatado por:",
             "Mark Completed":"Marcar completado","Cancel Post":"Cancelar publicación","No shifts posted yet":"Aún no has publicado turnos",
             "Use the form above to create your first \"Called in Sick\" post.":"Usa el formulario de arriba para crear tu primera publicación \"por enfermedad\".",
@@ -1031,7 +1033,7 @@
             const { data: shifts } = await sb.from('cistyr_shifts').select(SHIFT_SELECT).in('status',['open','rescued']).order('created_at',{ascending:false});
             posts = (shifts||[]).map(mapShift);
             await loadContacts();
-            if (myRole === 'business') await refreshPostPrice();
+            await loadApplications();
             if(myRole==='worker'){
                 const { data: rt } = await sb.from('cistyr_ratings').select('*, business:cistyr_profiles!cistyr_ratings_business_id_fkey(business_name)').eq('worker_id', currentUser.id).order('created_at',{ascending:false});
                 ratings = (rt||[]).map(r=>({
@@ -1049,6 +1051,7 @@
             const { data: shifts } = await sb.from('cistyr_shifts').select(SHIFT_SELECT).in('status',['open','rescued']).order('created_at',{ascending:false});
             posts = (shifts||[]).map(mapShift);
             await loadContacts();
+            await loadApplications();
             renderShifts();
             if(currentMode==='business') renderMyPosts();
         }
@@ -1119,6 +1122,26 @@
         async function cistyrSignOut(){ await sb.auth.signOut(); }
         async function handlePaymentReturn(){
             const u = new URL(window.location.href);
+            const selectedPaid = u.searchParams.get('cistyr_selection_paid');
+            const selectedCanceled = u.searchParams.get('cistyr_selection_canceled');
+            if (selectedPaid) {
+                const { data, error } = await sb.functions.invoke('cistyr-confirm', { body: { session_id: selectedPaid } });
+                if (!error && data?.selected) {
+                    await refreshBoard();
+                    switchMode('business');
+                    showToast('Payment received. Your chosen worker is confirmed!', 'success');
+                } else showToast(data?.error || 'Payment is processing. Refresh your shifts shortly.', 'error');
+                u.searchParams.delete('cistyr_selection_paid');
+                history.replaceState({}, document.title, u.pathname + u.search + u.hash);
+                return;
+            }
+            if (selectedCanceled) {
+                await releaseSelection(selectedCanceled);
+                showToast('Selection checkout canceled. You can choose again.', 'error');
+                u.searchParams.delete('cistyr_selection_canceled');
+                history.replaceState({}, document.title, u.pathname + u.search + u.hash);
+                return;
+            }
             const paid = u.searchParams.get('cistyr_paid');
             const canceled = u.searchParams.get('cistyr_canceled');
             if(paid){
@@ -1151,6 +1174,8 @@
             const wt=document.getElementById('worker-toggle'), bt=document.getElementById('business-toggle');
             if(myRole==='worker'){ if(bt) bt.style.display='none'; if(wt) wt.style.display=''; }
             else { if(wt) wt.style.display='none'; if(bt) bt.style.display=''; }
+            const postCta=document.getElementById('post-shift-cta');
+            if(postCta) postCta.style.display = myRole==='business' ? '' : 'none';
             const bar=document.getElementById('auth-bar');
             if(bar){ bar.style.display='flex'; document.getElementById('auth-bar-email').innerText = (currentUser?currentUser.email:'') + ' • ' + myRole; }
             const nav=document.getElementById('nav-signin'); if(nav) nav.style.display='none';
@@ -1168,6 +1193,10 @@
             } else {
                 loadedUserId = null;
                 posts=[]; ratings=[]; workerProfile={}; businessProfile={}; myRole=null; myProfile=null;
+                document.getElementById('post-shift-cta').style.display='';
+                document.getElementById('worker-toggle').style.display='';
+                document.getElementById('business-toggle').style.display='';
+                switchMode('worker');
                 const bar=document.getElementById('auth-bar'); if(bar) bar.style.display='none';
                 showAuthModal();
             }
@@ -1377,11 +1406,11 @@
                     <div class="mt-auto pt-4 flex items-center justify-between border-t border-slate-100">
                         <div class="text-[10px] text-slate-400 font-mono">${post.postedAt}</div>
                         
-                        ${isOpen ? `
-                            <button onclick="rescueShift('${post.id}', this)" 
+                        ${isOpen && applications.some(a => a.shift_id === post.id && a.worker_id === currentUser?.id) ? '<span class="text-xs font-semibold text-emerald-700">Application sent · awaiting business choice</span>' : isOpen ? `
+                            <button onclick="rescueShift('${post.id}', this)"
                                     class="rescue-btn px-5 py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-extrabold rounded-2xl flex items-center gap-x-2 shadow-sm">
                                 <i class="fa-solid fa-handshake"></i>
-                                <span>TO YOUR RESCUE</span>
+                                <span>APPLY TO RESCUE</span>
                             </button>
                         ` : `
                             <div class="px-5 py-2 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-2xl flex items-center gap-x-2">
@@ -1416,6 +1445,10 @@
 
         // Switch between Worker and Business mode
         function switchMode(mode) {
+            if (mode === 'business' && currentUser && myRole !== 'business') {
+                showToast('Only business accounts can post shifts.', 'error');
+                return;
+            }
             currentMode = mode;
             
             const workerPanel = document.getElementById('worker-panel');
@@ -1452,20 +1485,24 @@
             }
         }
         
-        async function refreshPostPrice() {
-            if (!currentUser || myRole !== 'business') return;
-            const [claims, shifts] = await Promise.all([
-                sb.from('cistyr_free_post_claims').select('business_id').eq('business_id', currentUser.id).limit(1),
-                sb.from('cistyr_shifts').select('id').eq('business_id', currentUser.id).limit(1)
+        async function loadApplications() {
+            applications = []; selections = []; applicantProfiles = {};
+            if (!currentUser || !posts.length) return;
+            const ids = posts.filter(p => myRole === 'worker' ? p.status === 'open' : p.businessId === currentUser.id).map(p => p.id);
+            if (!ids.length) return;
+            const [a, s] = await Promise.all([
+                sb.from('cistyr_shift_applications').select('shift_id,worker_id,applied_at').in('shift_id', ids),
+                myRole === 'business' ? sb.from('cistyr_shift_selections').select('shift_id,worker_id,status,stripe_session_id').in('shift_id', ids) : Promise.resolve({data:[]})
             ]);
-            firstPostFree = !claims.error && !shifts.error && !(claims.data?.length) && !(shifts.data?.length);
-            document.getElementById('post-submit-label').textContent = firstPostFree ? 'PUBLISH FIRST SHIFT FREE' : 'PAY $6.25 & PUBLISH SHIFT';
-            document.getElementById('post-price-note').textContent = firstPostFree
-                ? 'Your first shift post is free. Additional posts cost $6.25 each.'
-                : 'Secure Stripe checkout — $6.25 per additional post. Your shift goes live after payment.';
+            applications = a.data || []; selections = s.data || [];
+            if (myRole === 'business' && applications.length) {
+                const workers = [...new Set(applications.map(x => x.worker_id))];
+                const { data } = await sb.from('cistyr_profiles').select('id,display_name,categories').in('id', workers);
+                (data || []).forEach(p => { applicantProfiles[p.id] = p; });
+            }
         }
 
-        // First shift free; subsequent posts require a $6.25 Stripe checkout.
+        // Posting is free. Payment happens when the business chooses an applicant.
         async function postNewShift(e) {
             e.preventDefault();
             if(!requireAuth()) return;
@@ -1500,11 +1537,9 @@
             }});
             if (data?.free && !error) {
                 if (btn) btn.disabled = false;
-                firstPostFree = false;
-                await refreshPostPrice();
                 await refreshBoard();
                 e.target.reset();
-                showToast('Your first shift is posted free!', 'success');
+                showToast('Shift posted. Up to three workers can apply.', 'success');
                 return;
             }
             if(error || !data || !data.url){
@@ -1532,7 +1567,7 @@
                 return;
             }
             
-            const myPosts = posts.filter(p => p.businessName === businessProfile.name);
+            const myPosts = posts.filter(p => p.businessId === currentUser?.id);
             countEl.innerHTML = myPosts.length;
             
             if (myPosts.length === 0) {
@@ -1546,6 +1581,21 @@
             
             myPosts.forEach(post => {
                 const isRescued = post.status === 'rescued';
+                const applicants = applications.filter(a => a.shift_id === post.id);
+                const pending = selections.find(s => s.shift_id === post.id && s.status === 'pending');
+                const applicantHTML = !isRescued ? `<div class="mt-3 rounded-2xl bg-slate-50 p-3 text-sm">
+                    <div class="font-semibold">Interested workers (${applicants.length}/3)</div>
+                    ${applicants.length ? applicants.map(a => {
+                        const profile = applicantProfiles[a.worker_id] || {};
+                        const name = escapeHTML(profile.display_name || 'Worker');
+                        const skills = escapeHTML((profile.categories || []).join(', '));
+                        const selectionButton = pending && pending.worker_id !== a.worker_id
+                            ? '<span class="text-xs text-slate-400">Another checkout is in progress</span>'
+                            : `<button type="button" onclick="chooseWorker('${post.id}','${a.worker_id}')" class="text-xs text-white bg-red-600 px-3 py-2 rounded-xl">${pending ? 'Resume checkout' : 'Choose for $6.25'}</button>`;
+                        return `<div class="mt-2 flex flex-wrap items-center justify-between gap-2 border-t pt-2"><span>${name}${skills ? ` · ${skills}` : ''}</span>${selectionButton}</div>`;
+                    }).join('') : '<p class="text-xs text-slate-500 mt-1">Waiting for workers to apply.</p>'}
+                    ${pending ? `<button type="button" onclick="releaseSelection('${post.id}')" class="mt-2 text-xs underline">Change my choice</button>` : ''}
+                </div>` : '';
                 const div = document.createElement('div');
                 div.className = `bg-white border ${isRescued ? 'border-emerald-200' : 'border-red-200'} rounded-3xl p-5`;
                 
@@ -1582,6 +1632,7 @@
                     <div class="mt-4">
                         ${statusLight}
                         ${rescuerInfo}
+                        ${applicantHTML}
                     </div>
                     
                     <div class="mt-4 flex gap-x-2">
@@ -1601,8 +1652,26 @@
                 grid.appendChild(div);
             });
         }
+
+        function escapeHTML(value) {
+            return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        async function chooseWorker(shiftId, workerId) {
+            if (myRole !== 'business' || !currentUser) return;
+            const { data, error } = await sb.functions.invoke('cistyr-select-worker', { body: { shift_id: shiftId, worker_id: workerId } });
+            if (error || !data?.url) { showToast(data?.error || error?.message || 'Checkout unavailable.', 'error'); return; }
+            window.location.href = data.url;
+        }
+
+        async function releaseSelection(shiftId) {
+            if (myRole !== 'business' || !currentUser) return;
+            const { data, error } = await sb.functions.invoke('cistyr-select-worker', { body: { shift_id: shiftId, action: 'release' } });
+            if (error || data?.error) { showToast(data?.error || error.message, 'error'); return; }
+            await refreshBoard();
+        }
         
-        // Worker clicks "To Your Rescue"
+        // Workers apply; the business can review up to three.
         async function rescueShift(postId, buttonElement) {
             if(!requireAuth()) return;
             if(myRole!=='worker'){ showToast('Only worker accounts can rescue shifts.','error'); return; }
@@ -1614,21 +1683,17 @@
             const post = posts.find(p => p.id === postId);
             if (!post) return;
             if (post.status === 'rescued') { showToast("This shift has already been rescued.", "error"); return; }
-            if (!confirm(`Confirm you can cover this shift at ${post.businessName}?\n\nTime: ${post.time}\nPay: ${post.pay}\n\nYou will be marked as the rescuer and the light will turn GREEN.`)) { return; }
-            const { data, error } = await sb.from('cistyr_shifts')
-                .update({ status:'rescued', rescuer_id: currentUser.id })
-                .eq('id', postId).eq('status','open')
-                .select(SHIFT_SELECT).maybeSingle();
-            if (error) { showToast('Could not rescue: '+error.message,'error'); return; }
-            if (!data) { showToast('Sorry — someone just grabbed this one. Refreshing…','error'); await refreshBoard(); return; }
-            Object.assign(post, mapShift(data));
+            if (!confirm(`Apply to cover the shift at ${post.businessName}?\n\nTime: ${post.time}\nPay: ${post.pay}\n\nThe business may choose one of up to three applicants.`)) return;
+            const { error } = await sb.rpc('cistyr_apply_to_shift', { p_shift_id: postId });
+            if (error) { showToast(error.message, 'error'); await refreshBoard(); return; }
+            applications.push({ shift_id: postId, worker_id: currentUser.id });
             buttonElement.outerHTML = `
                 <div class="px-5 py-2 bg-emerald-600 text-white text-xs font-extrabold rounded-2xl flex items-center justify-center gap-x-2">
                     <i class="fa-solid fa-check-double"></i>
-                    <span>YOU'RE ON IT!</span>
+                    <span>APPLICATION SENT</span>
                 </div>
             `;
-            showToast(`Great! You rescued the shift at ${post.businessName}. The business can now see you as the rescuer.`, "success");
+            showToast('Application sent. The business will choose one worker.', 'success');
             setTimeout(() => { renderShifts(); if (currentMode === 'business') renderMyPosts(); }, 800);
         }
 
