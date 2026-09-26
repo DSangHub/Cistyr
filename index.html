@@ -736,17 +736,26 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-slate-100 mt-12 py-8">
-        <div class="max-w-screen-xl mx-auto px-6 text-xs text-slate-400 flex flex-col md:flex-row justify-between items-center gap-y-2">
+    <footer class="bg-white border-t border-slate-100 mt-12 py-10">
+        <div class="max-w-screen-xl mx-auto px-6 grid gap-8 sm:grid-cols-3 text-sm text-slate-600">
             <div>
-                © CISTYR 2026 • cistyr.org • Direct matching platform (not a staffing agency)
+                <h2 class="font-bold text-slate-800 mb-2">CISTYR</h2>
+                <p>Called in Sick, To Your Rescue. Direct matching platform (not a staffing agency).</p>
             </div>
-            <div class="flex items-center gap-x-4">
-                <span>CA-focused • Built for compliance &amp; speed</span>
-                <span class="hidden md:inline">•</span>
-                <button onclick="resetDemoData()" class="hover:text-slate-500 underline">Sign out</button>
+            <div>
+                <h2 class="font-bold text-slate-800 mb-2">About</h2>
+                <p>CA-focused • Built for compliance &amp; speed</p>
+                <button onclick="resetDemoData()" class="mt-3 text-emerald-700 hover:underline">Sign out</button>
+            </div>
+            <div id="contact-us">
+                <h2 class="font-bold text-slate-800 mb-2">Contact Us</h2>
+                <p class="mb-3">Questions about shifts, accounts, or partnerships? Send us an email.</p>
+                <a href="mailto:jobcistyr@gmail.com?subject=CISTYR%20contact" class="inline-flex items-center gap-2 font-semibold text-emerald-700 hover:underline break-all">
+                    <i class="fa-regular fa-envelope" aria-hidden="true"></i>jobcistyr@gmail.com
+                </a>
             </div>
         </div>
+        <p class="max-w-screen-xl mx-auto px-6 mt-8 text-xs text-slate-400">© CISTYR 2026 • cistyr.org</p>
     </footer>
 
     <script>
