@@ -375,6 +375,27 @@
                     <p class="text-center text-xs text-slate-400 mt-4">Shifts shown are same-day or next-day only • Sacramento &amp; surrounding areas</p>
                 </div>
             </div>
+            <section aria-labelledby="job-help-title" class="mt-8 bg-white rounded-3xl border border-emerald-100 p-6 shadow-sm max-w-4xl mx-auto">
+                <div class="flex items-center gap-3 mb-2">
+                    <i class="fa-solid fa-comments text-emerald-600 text-xl" aria-hidden="true"></i>
+                    <h2 id="job-help-title" class="text-2xl font-bold">Job Seeker Help</h2>
+                </div>
+                <p class="text-sm text-slate-600 mb-4">Choose a common question or ask your own.</p>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button type="button" onclick="askJobFaq(0)" class="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-sm font-medium">How do I apply?</button>
+                    <button type="button" onclick="askJobFaq(1)" class="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-sm font-medium">Who is hiring now?</button>
+                    <button type="button" onclick="askJobFaq(2)" class="px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-sm font-medium">What experience do I need?</button>
+                </div>
+                <div id="job-help-messages" role="log" aria-live="polite" class="rounded-2xl bg-slate-50 p-4 min-h-20 max-h-80 overflow-y-auto space-y-3 text-sm">
+                    <p class="text-slate-500">Hi! I can help you find and apply for shifts on CISTYR.</p>
+                </div>
+                <form id="job-help-form" onsubmit="askJobHelp(event)" class="mt-3 flex flex-col sm:flex-row gap-2">
+                    <label for="job-help-question" class="sr-only">Ask a job seeker question</label>
+                    <input id="job-help-question" type="text" maxlength="500" placeholder="Ask about finding a shift…" class="flex-1 min-w-0 border border-slate-300 rounded-xl px-4 py-3 text-sm" required>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl px-5 py-3">Ask</button>
+                </form>
+                <p class="text-xs text-slate-500 mt-2">Common questions work without sign-in. Sign in as a worker for other questions.</p>
+            </section>
         </div>
 
         <!-- BUSINESS PANEL -->
@@ -739,6 +760,69 @@
         const SB_KEY = 'sb_publishable_FUZwE9jkUe_H7PNUuGkivQ_Fnp8KCbe';
         const sb = window.supabase.createClient(SB_URL, SB_KEY);
 
+        const jobFaqs = [
+            {
+                question: 'How do I apply for a job on this website?',
+                answer: 'No lengthy job application is needed. Create a worker profile, look for nearby shifts, and tap “Apply to Rescue” on one you can cover. A business can review up to three interested workers and choose one.',
+                esQuestion: '¿Cómo solicito un trabajo en este sitio?',
+                esAnswer: 'No necesitas llenar una solicitud larga. Crea un perfil de trabajador, busca turnos cercanos y toca “Solicitar turno” si puedes cubrirlo. El negocio puede revisar hasta tres personas y elegir a una.'
+            },
+            {
+                question: 'Do you know who is hiring right now?',
+                answer: 'Businesses post available shifts on the board. Use “Near me” and the distance filter to look for openings nearby. Automatic job notifications are not available yet.',
+                esQuestion: '¿Sabes quién está contratando ahora?',
+                esAnswer: 'Los negocios publican los turnos disponibles en el tablero. Usa “Cerca de mí” y el filtro de distancia para buscar vacantes cercanas. Las notificaciones automáticas aún no están disponibles.'
+            },
+            {
+                question: 'What kind of experience are they looking for?',
+                answer: 'It depends on the shift. Read each posting for its duties and requirements. Some shifts may be available without prior experience.',
+                esQuestion: '¿Qué experiencia necesitan?',
+                esAnswer: 'Depende del turno. Lee cada anuncio para conocer las tareas y los requisitos. Algunos turnos pueden estar disponibles sin experiencia previa.'
+            }
+        ];
+
+        function addJobHelpMessage(message, who) {
+            const log = document.getElementById('job-help-messages');
+            const item = document.createElement('p');
+            item.className = who === 'user' ? 'ml-8 bg-emerald-100 text-emerald-900 rounded-xl p-3' : 'mr-8 bg-white border border-slate-200 rounded-xl p-3';
+            item.textContent = message;
+            log.appendChild(item);
+            log.scrollTop = log.scrollHeight;
+            return item;
+        }
+
+        function askJobFaq(index) {
+            const faq = jobFaqs[index];
+            if (!faq) return;
+            addJobHelpMessage(currentLang === 'es' ? faq.esQuestion : faq.question, 'user');
+            addJobHelpMessage(currentLang === 'es' ? faq.esAnswer : faq.answer, 'assistant');
+        }
+
+        async function askJobHelp(event) {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const input = document.getElementById('job-help-question');
+            const question = input.value.trim().slice(0, 500);
+            if (!question) return;
+            addJobHelpMessage(question, 'user');
+            input.value = '';
+            if (!currentUser || myRole !== 'worker') {
+                addJobHelpMessage('Sign in with a worker account to ask a custom question. The common answers above are available to everyone.', 'assistant');
+                return;
+            }
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            const pending = addJobHelpMessage('Thinking…', 'assistant');
+            try {
+                const { data, error } = await sb.functions.invoke('cistyr-job-help', { body: { question } });
+                if (error || !data?.answer) {
+                    pending.textContent = data?.error || 'AI answers are unavailable right now. Try the common questions above.';
+                } else pending.textContent = data.answer;
+            } catch (_) {
+                pending.textContent = 'AI answers are unavailable right now. Try the common questions above.';
+            } finally { button.disabled = false; }
+        }
+
         // ===== App state =====
         let posts = [];
         let workerProfile = {};
@@ -858,6 +942,13 @@
             // app / board
             "Demo data saved in your browser":"Datos guardados en tu navegador",
             "Your Worker Profile":"Tu perfil de trabajador","Edit":"Editar","No resume uploaded yet":"Aún no has subido currículum",
+            "Job Seeker Help":"Ayuda para quienes buscan trabajo",
+            "Choose a common question or ask your own.":"Elige una pregunta común o escribe la tuya.",
+            "How do I apply?":"¿Cómo solicito un turno?", "Who is hiring now?":"¿Quién contrata ahora?",
+            "What experience do I need?":"¿Qué experiencia necesito?",
+            "Hi! I can help you find and apply for shifts on CISTYR.":"¡Hola! Puedo ayudarte a buscar y solicitar turnos en CISTYR.",
+            "Ask about finding a shift…":"Pregunta cómo encontrar un turno…", "Ask":"Preguntar",
+            "Common questions work without sign-in. Sign in as a worker for other questions.":"Las preguntas comunes funcionan sin iniciar sesión. Inicia sesión como trabajador para otras preguntas.",
             "Available Rescue Shifts":"Turnos disponibles","All Categories":"Todas las categorías",
             "Fast Food":"Comida rápida","Retail":"Comercio","Medical Non-Essential":"Médico no esencial",
             "🍔 Fast Food":"🍔 Comida rápida","🛍️ Retail":"🛍️ Comercio","🏥 Medical Non-Essential":"🏥 Médico no esencial",
