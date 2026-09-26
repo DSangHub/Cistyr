@@ -1641,7 +1641,7 @@
                                     class="flex-1 text-xs py-2 border border-emerald-300 hover:bg-emerald-50 text-emerald-700 rounded-2xl font-medium transition-colors">
                                 Mark Completed
                             </button>
-                        ` : `
+                        ` : pending ? '<span class="flex-1 text-xs py-2 text-center text-slate-500">Checkout in progress · release it before canceling</span>' : `
                             <button onclick="cancelShift('${post.id}', this)" 
                                     class="flex-1 text-xs py-2 border border-red-200 hover:bg-red-50 text-red-600 rounded-2xl font-medium transition-colors">
                                 Cancel Post
