@@ -114,3 +114,13 @@ begin
 end $$;
 create trigger cistyr_protect_shift_selection before update on public.cistyr_shifts
   for each row execute function public.cistyr_protect_shift_selection();
+
+create or replace function public.cistyr_prevent_pending_selection_delete()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if exists (select 1 from public.cistyr_shift_selections where shift_id=old.id and status='pending')
+    then raise exception 'Release the pending checkout before canceling this shift'; end if;
+  return old;
+end $$;
+create trigger cistyr_prevent_pending_selection_delete before delete on public.cistyr_shifts
+  for each row execute function public.cistyr_prevent_pending_selection_delete();
