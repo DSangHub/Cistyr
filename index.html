@@ -157,6 +157,15 @@
         </div>
     </nav>
 
+    <div class="bg-emerald-50 border-b border-emerald-100 px-6 py-3 text-center">
+        <a href="#available-for-work" class="font-bold text-emerald-800">Available for Work <span aria-hidden="true">→</span></a>
+    </div>
+    <section id="available-for-work" class="max-w-screen-xl mx-auto px-6 py-10 scroll-mt-24" aria-labelledby="available-heading">
+        <h2 id="available-heading" class="text-3xl font-bold text-slate-900">Available for Work</h2>
+        <p class="mt-2 text-slate-600">Workers: add your name and ZIP code. Businesses: find and select workers near you.</p>
+        <div id="availability-content" class="mt-5"></div>
+    </section>
+
     <!-- Hero / Intro -->
     <div class="bg-white border-b border-slate-100">
         <div class="max-w-screen-xl mx-auto px-6 pt-12 pb-12">
@@ -914,10 +923,160 @@
             );
         }
 
+
+        // Available workers are shared through Supabase, never browser-only storage.
+        let availableOrigin = null;
+        let availableRows = [];
+        let selectedWorkerIds = new Set();
+        let availabilityViewVersion = 0;
+        const availabilityInputClass = 'w-full border border-slate-300 rounded-xl px-4 py-3 bg-white';
+        const availabilityButtonClass = 'px-5 py-3 rounded-xl bg-emerald-700 text-white font-semibold disabled:opacity-50';
+        async function zipLocation(zip) {
+            if (!/^\d{5}$/.test(zip)) throw new Error('Enter a valid 5-digit US ZIP code.');
+            const response = await fetch('https://api.zippopotam.us/us/' + zip, {signal: AbortSignal.timeout(10000)});
+            if (!response.ok) throw new Error('ZIP code could not be found. Check it and try again.');
+            const place = (await response.json()).places?.[0];
+            const lat = Number(place?.latitude), lng = Number(place?.longitude);
+            if (!place || !Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('Could not locate that ZIP code.');
+            return {lat, lng};
+        }
+        async function renderAvailability() {
+            const version = ++availabilityViewVersion;
+            const content = document.getElementById('availability-content');
+            availableRows = []; selectedWorkerIds = new Set();
+            if (!currentUser) {
+                availableOrigin = null;
+                content.innerHTML = `<div class="flex flex-wrap gap-3"><button class="${availabilityButtonClass}" onclick="cistyrStart('worker')">Worker sign in / sign up</button><button class="px-5 py-3 rounded-xl border border-emerald-700 text-emerald-800 font-semibold" onclick="cistyrStart('business')">Business sign in / sign up</button></div>`;
+                return;
+            }
+            if (myRole === 'worker') {
+                content.innerHTML = '<p role="status">Loading your availability…</p>';
+                const {data, error} = await sb.from('cistyr_worker_availability').select('*').eq('worker_id', currentUser.id).maybeSingle();
+                if (version !== availabilityViewVersion) return;
+                if (error) { content.innerHTML = '<p role="alert">Could not load availability. Please refresh and try again.</p>'; return; }
+                content.innerHTML = `<form onsubmit="saveAvailability(event)" class="max-w-2xl rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-4">
+                    <div class="grid sm:grid-cols-2 gap-4"><label class="block font-semibold">Name<input id="available-name" autocomplete="name" maxlength="100" required value="${escapeHTML(data?.display_name || workerProfile.name || '')}" class="${availabilityInputClass}"></label>
+                    <label class="block font-semibold">ZIP code<input id="available-zip" autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" required value="${escapeHTML(data?.zip_code || '')}" class="${availabilityInputClass}"></label></div>
+                    <label class="flex items-center gap-3"><input id="available-check" type="checkbox" class="accent-emerald-700 w-5 h-5" ${data?.is_available ? 'checked' : ''}>I am available for work</label>
+                    <p class="text-sm text-slate-600">When available, your name and ZIP area appear to signed-in businesses. Uncheck this box and save to leave the directory. Your phone, email, and exact location are not shown here.</p>
+                    <button type="submit" class="${availabilityButtonClass}">Save availability</button><p id="availability-status" role="status" aria-live="polite"></p></form>`;
+            } else if (myRole === 'business') {
+                content.innerHTML = `<div class="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                    <form onsubmit="searchAvailableWorkers(event)" class="flex flex-wrap items-end gap-3">
+                    <label class="font-semibold">Business ZIP code<input id="available-search-zip" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}" maxlength="5" class="${availabilityInputClass}" placeholder="e.g. 93721"></label>
+                    <label class="font-semibold">Within<select id="available-radius" class="${availabilityInputClass}"><option value="5">5 miles</option><option value="10">10 miles</option><option value="25" selected>25 miles</option><option value="50">50 miles</option><option value="100">100 miles</option></select></label>
+                    <button type="submit" class="${availabilityButtonClass}">Find workers</button><button type="button" onclick="locateAvailableWorkers(this)" class="px-5 py-3 rounded-xl border border-emerald-700 text-emerald-800 font-semibold">Use my location</button></form>
+                    <label class="flex items-center gap-2 mt-4"><input id="available-selected-only" type="checkbox" onchange="renderAvailableResults()">Show selected workers only</label>
+                    <p class="mt-3 text-sm text-slate-600">Distances are approximate, based on workers’ ZIP areas. Select workers to save a shortlist; this does not book a shift. Use your shift’s applicant list to hire.</p>
+                    <p id="availability-status" class="mt-3" role="status" aria-live="polite">Enter your ZIP code or use your location to find nearby workers.</p>
+                    <div id="available-results" class="mt-4 grid md:grid-cols-2 lg:grid-cols-3 gap-4"></div></div>`;
+                availableOrigin = null;
+            }
+            if (currentLang === 'es') translateTree(content);
+        }
+        async function saveAvailability(event) {
+            event.preventDefault();
+            if (!requireAuth() || myRole !== 'worker') return;
+            const button = event.submitter, status = document.getElementById('availability-status');
+            const name = document.getElementById('available-name').value.trim();
+            const zip = document.getElementById('available-zip').value.trim();
+            const isAvailable = document.getElementById('available-check').checked;
+            if (!name || name.length > 100) { status.textContent = 'Enter your name (up to 100 characters).'; return; }
+            button.disabled = true; status.textContent = 'Saving availability…';
+            try {
+                // Going offline must also work when the ZIP lookup provider is unavailable.
+                if (!isAvailable) {
+                    const {error} = await sb.from('cistyr_worker_availability').delete().eq('worker_id', currentUser.id);
+                    if (error) throw error;
+                } else {
+                    const location = await zipLocation(zip);
+                    const {error} = await sb.from('cistyr_worker_availability').upsert({worker_id: currentUser.id, display_name:name, zip_code:zip, latitude:location.lat, longitude:location.lng, is_available:true}, {onConflict:'worker_id'});
+                    if (error) throw error;
+                }
+                status.textContent = isAvailable ? 'Saved. Businesses can now find you in your ZIP area.' : 'Saved. You are no longer listed as available.';
+            } catch (error) { status.textContent = 'Could not save availability: ' + error.message; }
+            finally { button.disabled = false; }
+        }
+        async function searchAvailableWorkers(event) {
+            event.preventDefault();
+            const status = document.getElementById('availability-status'), button = event.submitter;
+            button.disabled = true; status.textContent = 'Finding workers…';
+            try {
+                const zip = document.getElementById('available-search-zip').value.trim();
+                if (zip) availableOrigin = await zipLocation(zip);
+                else if (!availableOrigin) throw new Error('Enter a ZIP code or use your location.');
+                await loadAvailableWorkers();
+            } catch(error) { status.textContent = error.message; }
+            finally { button.disabled = false; }
+        }
+        async function locateAvailableWorkers(button) {
+            const status = document.getElementById('availability-status');
+            if (!navigator.geolocation) { status.textContent = 'Location is unavailable. Enter your ZIP code instead.'; return; }
+            button.disabled = true; status.textContent = 'Finding your location…';
+            try {
+                const position = await new Promise((resolve,reject) => navigator.geolocation.getCurrentPosition(resolve,reject,{timeout:10000,maximumAge:300000}));
+                availableOrigin = {lat:position.coords.latitude,lng:position.coords.longitude};
+                document.getElementById('available-search-zip').value = '';
+                await loadAvailableWorkers();
+            } catch(error) { status.textContent = 'Could not use your location. Enter your ZIP code instead.'; }
+            finally { button.disabled = false; }
+        }
+        async function loadAvailableWorkers() {
+            if (!currentUser || myRole !== 'business' || !availableOrigin) return;
+            const version = availabilityViewVersion;
+            const radius = Number(document.getElementById('available-radius').value);
+            const {lat,lng} = availableOrigin;
+            const latDelta = radius/69 + 0.02;
+            const lngDelta = radius/(69*Math.max(0.01,Math.cos(lat*Math.PI/180))) + 0.02;
+            const [{data,error},{data:saved,error:saveError}] = await Promise.all([
+                sb.from('cistyr_worker_availability').select('*').eq('is_available',true).gte('latitude',lat-latDelta).lte('latitude',lat+latDelta).gte('longitude',lng-lngDelta).lte('longitude',lng+lngDelta).limit(1000),
+                sb.from('cistyr_worker_shortlist').select('worker_id').eq('business_id',currentUser.id)
+            ]);
+            if (version !== availabilityViewVersion) return;
+            if (error || saveError) throw new Error('Could not load workers. Please try again.');
+            availableRows = (data || []).map(row => ({...row,distance:haversineMiles(lat,lng,row.latitude,row.longitude)})).filter(row=>row.distance<=radius).sort((a,b)=>a.distance-b.distance);
+            selectedWorkerIds = new Set((saved||[]).map(row=>row.worker_id));
+            renderAvailableResults();
+        }
+        function renderAvailableResults() {
+            const grid = document.getElementById('available-results');
+            if (!grid || !availableOrigin) return;
+            const onlySelected = document.getElementById('available-selected-only').checked;
+            const rows = availableRows.filter(row=>!onlySelected || selectedWorkerIds.has(row.worker_id));
+            document.getElementById('availability-status').textContent = rows.length ? `${rows.length} available worker${rows.length===1?'':'s'} nearby.` : 'No available workers found for these filters. Try a larger radius or another ZIP code.';
+            grid.replaceChildren();
+            rows.forEach(row=>{
+                const card = document.createElement('div'); card.className = 'bg-white rounded-xl border border-slate-200 p-4';
+                const name = document.createElement('h3'); name.className = 'font-bold text-lg'; name.textContent = row.display_name;
+                const detail = document.createElement('p'); detail.className = 'text-slate-600 text-sm my-2'; detail.textContent = `ZIP ${row.zip_code} · About ${row.distance.toFixed(1)} miles away`;
+                const label = document.createElement('label'); label.className = 'flex gap-2 items-center font-semibold text-emerald-800';
+                const check = document.createElement('input'); check.type = 'checkbox'; check.checked = selectedWorkerIds.has(row.worker_id);
+                check.onchange = ()=>toggleAvailableSelection(row.worker_id,check);
+                label.append(check,document.createTextNode('Selected for shortlist')); card.append(name,detail,label); grid.append(card);
+            });
+        }
+        async function toggleAvailableSelection(workerId, checkbox) {
+            if (!currentUser || myRole !== 'business') return;
+            checkbox.disabled = true;
+            const checked = checkbox.checked;
+            const {error} = checked ? await sb.from('cistyr_worker_shortlist').insert({business_id:currentUser.id,worker_id:workerId}) : await sb.from('cistyr_worker_shortlist').delete().eq('business_id',currentUser.id).eq('worker_id',workerId);
+            if (error) { checkbox.checked = !checked; showToast('Could not save your selection. Please try again.','error'); }
+            else { if (checked) selectedWorkerIds.add(workerId); else selectedWorkerIds.delete(workerId); renderAvailableResults(); }
+            checkbox.disabled = false;
+        }
+
         // ===== i18n (English / Spanish) =====
         let currentLang = 'en';
         const _i18nOrig = new WeakMap();
         const I18N_ES = {
+            // available workers
+            "Available for Work":"Disponible para trabajar",
+            "Workers: add your name and ZIP code. Businesses: find and select workers near you.":"Trabajadores: agreguen su nombre y código postal. Negocios: busquen y seleccionen trabajadores cercanos.",
+            "Name":"Nombre", "ZIP code":"Código postal", "Business ZIP code":"Código postal del negocio",
+            "I am available for work":"Estoy disponible para trabajar", "Save availability":"Guardar disponibilidad",
+            "Find workers":"Buscar trabajadores", "Use my location":"Usar mi ubicación", "Within":"Dentro de",
+            "Show selected workers only":"Mostrar solo trabajadores seleccionados",
+            "Worker sign in / sign up":"Acceso / registro de trabajadores", "Business sign in / sign up":"Acceso / registro de negocios",
             // nav
             "How it Works":"Cómo funciona","Browse All":"Ver todos","Worker":"Trabajador","Business":"Negocio",
             "Sign in":"Iniciar sesión","Sign out":"Cerrar sesión",
@@ -1554,6 +1713,7 @@
                 return;
             }
             currentMode = mode;
+            renderAvailability();
             
             const workerPanel = document.getElementById('worker-panel');
             const businessPanel = document.getElementById('business-panel');
