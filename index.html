@@ -2283,6 +2283,10 @@
         }
 
         function showBusinessProfileModal() {
+            if (!currentUser || myRole !== 'business') {
+                cistyrStart('business');
+                return;
+            }
             const modal = document.getElementById('business-modal');
             modal.style.display = 'flex';
             
