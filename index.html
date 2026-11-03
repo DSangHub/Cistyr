@@ -666,7 +666,8 @@
                     </div>
                     <div>
                         <label class="text-xs font-bold tracking-wider text-slate-500">EMAIL</label>
-                        <input id="business-email" type="email" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="manager@business.com">
+                        <input id="business-email" type="email" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="Enter any email address" autocomplete="email">
+                        <p class="mt-1 text-xs text-slate-500">Personal or work email is welcome.</p>
                     </div>
                 </div>
                 
@@ -2305,7 +2306,7 @@
                 button.parentElement.after(status);
             }
             if (!currentUser || myRole !== 'business') {
-                status.textContent = t('Sign in with a business account to save your profile.');
+                status.textContent = t('Sign in with a Business (employer) account to save. You can use a personal or work email.');
                 return;
             }
             const userId = currentUser.id;
