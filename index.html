@@ -677,7 +677,7 @@
             </div>
             
             <div class="mt-7 flex gap-x-3">
-                <button onclick="saveBusinessProfile()" 
+                <button type="button" onclick="saveBusinessProfile(this)" 
                         class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 rounded-3xl transition-colors">
                     SAVE BUSINESS PROFILE
                 </button>
@@ -2295,24 +2295,49 @@
             document.getElementById('business-modal').style.display = 'none';
         }
         
-        async function saveBusinessProfile() {
-            businessProfile.name = document.getElementById('business-name').value.trim();
-            businessProfile.phone = document.getElementById('business-phone').value.trim();
-            businessProfile.email = document.getElementById('business-email').value.trim();
-            businessProfile.address = document.getElementById('business-address').value.trim();
-            if (!businessProfile.name) { alert(t("Business name is required.")); return; }
+        async function saveBusinessProfile(button) {
+            let status = document.getElementById('business-save-status');
+            if (!status) {
+                status = document.createElement('p');
+                status.id = 'business-save-status';
+                status.setAttribute('role', 'status');
+                status.className = 'text-sm text-slate-700 mt-3';
+                button.parentElement.after(status);
+            }
+            if (!currentUser || myRole !== 'business') {
+                status.textContent = t('Sign in with a business account to save your profile.');
+                return;
+            }
+            const userId = currentUser.id;
+            const draft = {};
+            draft.name = document.getElementById('business-name').value.trim();
+            draft.phone = document.getElementById('business-phone').value.trim();
+            draft.email = document.getElementById('business-email').value.trim();
+            draft.address = document.getElementById('business-address').value.trim();
+            if (!draft.name) { status.textContent = t("Business name is required."); return; }
+            button.disabled = true;
+            status.textContent = t("Saving…");
+            try {
             const { error } = await sb.from('cistyr_profiles').update({
-                business_name: businessProfile.name
-            }).eq('id', currentUser.id);
+                business_name: draft.name
+            }).eq('id', userId).select('id').single();
+            if (error) throw error;
             const { error: cerr } = await sb.from('cistyr_contacts').upsert({
-                id: currentUser.id, phone: businessProfile.phone,
-                email: businessProfile.email, address: businessProfile.address
+                id: userId, phone: draft.phone,
+                email: draft.email, address: draft.address
             });
-            if(error || cerr){ showToast('Could not save profile: '+((error||cerr).message),'error'); return; }
+            if (cerr) throw cerr;
+            businessProfile = draft;
+            status.textContent = '';
             hideBusinessProfileModal();
             renderBusinessProfileSummary();
             renderMyPosts();
             showToast("Business profile saved. You can now post shifts.", "success");
+            } catch (error) {
+                status.textContent = t("Could not save profile: ") + error.message;
+            } finally {
+                button.disabled = false;
+            }
         }
 
         // Toast notifications
