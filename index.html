@@ -655,8 +655,8 @@
             
             <div class="space-y-5">
                 <div>
-                    <label class="text-xs font-bold tracking-wider text-slate-500">BUSINESS / LOCATION NAME</label>
-                    <input id="business-name" type="text" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="QuickBite Burgers - Broadway">
+                    <label class="text-xs font-bold tracking-wider text-slate-500">BUSINESS NAME</label>
+                    <input id="business-name" type="text" class="mt-1 w-full border border-slate-300 rounded-2xl px-4 py-3 text-sm" placeholder="Enter business name">
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
@@ -1148,7 +1148,7 @@
             "QUICK AVAILABILITY NOTE":"NOTA RÁPIDA DE DISPONIBILIDAD","SAVE PROFILE":"GUARDAR PERFIL","Cancel":"Cancelar",
             // business modal
             "Business Profile":"Perfil de negocio","Used when posting shifts":"Se usa al publicar turnos",
-            "BUSINESS / LOCATION NAME":"NOMBRE DEL NEGOCIO / LOCAL","FULL ADDRESS":"DIRECCIÓN COMPLETA",
+            "BUSINESS NAME":"NOMBRE DEL NEGOCIO / LOCAL","FULL ADDRESS":"DIRECCIÓN COMPLETA",
             "SAVE BUSINESS PROFILE":"GUARDAR PERFIL DE NEGOCIO",
             // rating / reviews
             "Rate the Rescuer":"Califica al rescatista",
@@ -1343,7 +1343,7 @@
             const role = document.getElementById('signup-role').value;
             const lbl = document.getElementById('signup-name-label');
             const inp = document.getElementById('signup-name');
-            if(role==='business'){ lbl.innerText='BUSINESS / LOCATION NAME'; inp.placeholder='QuickBite Burgers - Broadway'; }
+            if(role==='business'){ lbl.innerText='BUSINESS NAME'; inp.placeholder='Enter business name'; }
             else { lbl.innerText='PROFILE NAME (SHOWN PUBLICLY)'; inp.placeholder='e.g. RescuerRex'; }
         }
         function setSignupRole(role){
