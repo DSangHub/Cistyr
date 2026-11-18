@@ -97,6 +97,9 @@
             max-width: 1280px;
             margin: 0 auto;
         }
+
+        .ad-placement { min-height: 120px; }
+        .ad-placement ins.adsbygoogle { display: block; width: 100%; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -745,6 +748,15 @@
         </div>
     </div>
 
+    <!-- AdSense: set both data attributes after the publisher and ad unit are approved. -->
+    <aside class="max-w-screen-xl mx-auto px-6 mt-10" aria-label="Advertisement">
+        <div id="cistyr-ad-placement" data-ad-client="" data-ad-slot=""
+             class="ad-placement rounded-2xl border border-slate-200 bg-white px-4 py-5 text-center shadow-sm">
+            <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Advertisement</p>
+            <div id="cistyr-ad-content" class="flex min-h-20 items-center justify-center text-sm text-slate-500">Ad space</div>
+        </div>
+    </aside>
+
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-100 mt-12 py-10">
         <div class="max-w-screen-xl mx-auto px-6 grid gap-8 sm:grid-cols-3 text-sm text-slate-600">
@@ -769,6 +781,30 @@
     </footer>
 
     <script>
+        // AdSense is only requested when both account-specific IDs are configured.
+        (function initAdSense() {
+            const placement = document.getElementById('cistyr-ad-placement');
+            const client = placement.dataset.adClient.trim();
+            const slot = placement.dataset.adSlot.trim();
+            if (!/^ca-pub-\d+$/.test(client) || !/^\d+$/.test(slot)) return;
+            const content = document.getElementById('cistyr-ad-content');
+            content.replaceChildren();
+            const ad = document.createElement('ins');
+            ad.className = 'adsbygoogle';
+            ad.style.display = 'block';
+            ad.dataset.adClient = client;
+            ad.dataset.adSlot = slot;
+            ad.dataset.adFormat = 'auto';
+            ad.dataset.fullWidthResponsive = 'true';
+            content.appendChild(ad);
+            const script = document.createElement('script');
+            script.async = true;
+            script.crossOrigin = 'anonymous';
+            script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(client);
+            script.onload = () => (window.adsbygoogle = window.adsbygoogle || []).push({});
+            document.head.appendChild(script);
+        })();
+
         // Tailwind script
         function initTailwind() {
             document.documentElement.style.setProperty('--accent', '#059669');
