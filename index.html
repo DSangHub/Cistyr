@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CISTYR • Called in Sick, To Your Rescue</title>
     <link rel="icon" type="image/jpeg" href="assets/icon.jpg">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1798577193195783" crossorigin="anonymous"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -750,7 +751,7 @@
 
     <!-- AdSense: set both data attributes after the publisher and ad unit are approved. -->
     <aside class="max-w-screen-xl mx-auto px-6 mt-10" aria-label="Advertisement">
-        <div id="cistyr-ad-placement" data-ad-client="" data-ad-slot=""
+        <div id="cistyr-ad-placement" data-ad-client="ca-pub-1798577193195783" data-ad-slot=""
              class="ad-placement rounded-2xl border border-slate-200 bg-white px-4 py-5 text-center shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-widest text-slate-500">Advertisement</p>
             <div id="cistyr-ad-content" class="flex min-h-20 items-center justify-center text-sm text-slate-500">Ad space</div>
@@ -797,12 +798,7 @@
             ad.dataset.adFormat = 'auto';
             ad.dataset.fullWidthResponsive = 'true';
             content.appendChild(ad);
-            const script = document.createElement('script');
-            script.async = true;
-            script.crossOrigin = 'anonymous';
-            script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(client);
-            script.onload = () => (window.adsbygoogle = window.adsbygoogle || []).push({});
-            document.head.appendChild(script);
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
         })();
 
         // Tailwind script
